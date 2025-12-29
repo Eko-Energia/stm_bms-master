@@ -1,0 +1,14 @@
+../Core/Src/BMS.c:9:19:BMS_Init	24	static
+../Core/Src/BMS.c:23:19:BMS_Mode_Normal	24	static
+../Core/Src/BMS.c:46:19:BMS_Mode_Standby	16	static
+../Core/Src/BMS.c:59:19:BMS_Mode_Error	16	static
+../Core/Src/BMS.c:72:19:BMS_Log_Data	16	static
+../Core/Src/BMS.c:77:19:BMS_CAN_UpdateMsg	16	static
+../Core/Src/BMS.c:85:19:BMS_ADC_ReadValues	16	static
+../Core/Src/BMS.c:107:19:BMS_ADC_Read_Voltage	40	static
+../Core/Src/BMS.c:131:19:BMS_ADC_Read_Temperature	48	static
+../Core/Src/BMS.c:170:19:BMS_ADC_Read_Current	32	static
+../Core/Src/BMS.c:190:19:BMS_CAN_ScallingParams	24	static
+../Core/Src/BMS.c:218:7:BMS_ADC_NTC_calibrateTemperature	40	static
+../Core/Src/BMS.c:229:7:BMS_ADC_NTC_GetTemperature	32	static
+../Core/Src/BMS.c:291:19:BMS_LED_Blink	32	static

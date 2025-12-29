@@ -32,6 +32,10 @@ extern "C" {
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
+// including stm32's drivers' drivers
+
+
+
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -88,10 +92,10 @@ void Error_Handler(void);
 #define AM_GPIO_Port GPIOC
 #define CD_Pin GPIO_PIN_8
 #define CD_GPIO_Port GPIOA
-#define LED_RED_Pin GPIO_PIN_8
-#define LED_RED_GPIO_Port GPIOB
-#define LED_GREEN_Pin GPIO_PIN_9
-#define LED_GREEN_GPIO_Port GPIOB
+#define RED_LD_Pin GPIO_PIN_8
+#define RED_LD_GPIO_Port GPIOB
+#define GREEN_LD_Pin GPIO_PIN_9
+#define GREEN_LD_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

@@ -1,0 +1,8 @@
+../EKO_Drivers/ADC/Src/adc_driver.c:45:19:ADC_Init	24	static
+../EKO_Drivers/ADC/Src/adc_driver.c:95:19:ADC_InitMultimode	16	static
+../EKO_Drivers/ADC/Src/adc_driver.c:129:19:ADC_ReadChannel	48	static
+../EKO_Drivers/ADC/Src/adc_driver.c:249:27:ADC_GetValue	48	static
+../EKO_Drivers/ADC/Src/adc_driver.c:271:20:HAL_ADC_ConvCpltCallback	16	static
+../EKO_Drivers/ADC/Src/adc_driver.c:282:20:ADC_ConfigGetRanksOfChannels	32	static
+../EKO_Drivers/ADC/Src/adc_driver.c:350:20:ADC_GetRank	32	static
+../EKO_Drivers/ADC/Src/adc_driver.c:377:19:ADC_Averaging	72	static
