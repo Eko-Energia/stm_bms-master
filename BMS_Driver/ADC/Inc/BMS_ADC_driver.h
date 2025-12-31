@@ -24,20 +24,21 @@
 extern "C" {
 #endif
 
-// Macros
-#define ADC_VOLTAGE_CH 12
-#define ADC_CURRENT_CH 11
-#define ADC_TEMP_CH    10
+/* Includes ----------------------------------------------------------------------------------  */
+#include "BMS_Types.h"
+
+/* Macros ------------------------------------------------------------------------------------  */
 
 
-// Functions' prototypes
-HAL_StatusTypeDef BMS_ADC_ReadValues(BMS_TypeDef* bms, ADC_HandleTypeDef* hadc);
 
-HAL_StatusTypeDef BMS_ADC_Read_Voltage(BMS_TypeDef* bms, ADC_HandleTypeDef* hadc);
+/* Functions' prototypes ---------------------------------------------------------------------  */
+HAL_StatusTypeDef BMS_ADC_ReadValues(BMS_TypeDef* bms);
 
-HAL_StatusTypeDef BMS_ADC_Read_Temperature(BMS_TypeDef* bms, ADC_HandleTypeDef* hadc);
+HAL_StatusTypeDef BMS_ADC_Read_Voltage(BMS_TypeDef* bms);
 
-HAL_StatusTypeDef BMS_ADC_Read_Current(BMS_TypeDef* bms, ADC_HandleTypeDef* hadc);
+HAL_StatusTypeDef BMS_ADC_Read_Temperature(BMS_TypeDef* bms);
+
+HAL_StatusTypeDef BMS_ADC_Read_Current(BMS_TypeDef* bms);
 
 float BMS_ADC_NTC_calibrateTemperature(float measured);
 

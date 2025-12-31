@@ -83,9 +83,7 @@ void MX_ADC1_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN ADC1_Init 2 */
-  if(ADC_Init(&hadc1, &bms.badc1, &bms.cadc1) != HAL_OK){
-	  Error_Handler();
-  }
+
   /* USER CODE END ADC1_Init 2 */
 
 }

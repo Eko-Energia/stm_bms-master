@@ -17,35 +17,35 @@
 #include "BMS_ADC_driver.h"
 
 
-HAL_StatusTypeDef BMS_ADC_ReadValues(BMS_TypeDef* bms, ADC_HandleTypeDef* hadc){
+HAL_StatusTypeDef BMS_ADC_ReadValues(BMS_TypeDef* bms){
 
 	// reading voltage | OK
-	if(BMS_ADC_Read_Voltage(bms, hadc) != HAL_OK){
+	if(BMS_ADC_Read_Voltage(bms) != HAL_OK){
 		return HAL_ERROR;
 	}
 
 	// reading temperature | Needs tests when physical thermistor is connected
 	/*
-	if(BMS_ADC_Read_Temperature(bms, hadc) != HAL_OK){
+	if(BMS_ADC_Read_Temperature(bms) != HAL_OK){
 		return HAL_ERROR;
 	}
 	*/
 
 	// reading current
-	if(BMS_ADC_Read_Current(bms, hadc) != HAL_OK){
+	if(BMS_ADC_Read_Current(bms) != HAL_OK){
 		return HAL_ERROR;
 	}
 
 	return HAL_OK;
 }
 
-HAL_StatusTypeDef BMS_ADC_Read_Voltage(BMS_TypeDef* bms, ADC_HandleTypeDef* hadc){
+HAL_StatusTypeDef BMS_ADC_Read_Voltage(BMS_TypeDef* bms){
 
 	uint16_t voltage_b = 0; // binary type of voltage
 	float voltage_f = 0.0f; // real type of voltage
 
 	// reading channel's value
-	if(ADC_ReadChannel(hadc, &bms->cadc1, &bms->badc1, ADC_VOLTAGE_CH, &voltage_b) != HAL_OK){
+	if(ADC_ReadChannel(&bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, ADC_VOLTAGE_CH, &voltage_b) != HAL_OK){
 		Error_Handler();
 	}
 
@@ -64,7 +64,7 @@ HAL_StatusTypeDef BMS_ADC_Read_Voltage(BMS_TypeDef* bms, ADC_HandleTypeDef* hadc
 	return HAL_OK;
 }
 
-HAL_StatusTypeDef BMS_ADC_Read_Temperature(BMS_TypeDef* bms, ADC_HandleTypeDef* hadc){
+HAL_StatusTypeDef BMS_ADC_Read_Temperature(BMS_TypeDef* bms){
 
 	float voltage_f     = 0.0f;		// real value of voltage on stm32's pin: PC0
 	float Rt            = 0.0f;		// resistance of thermistor
@@ -74,12 +74,12 @@ HAL_StatusTypeDef BMS_ADC_Read_Temperature(BMS_TypeDef* bms, ADC_HandleTypeDef* 
 
 
 	// reading value
-	if(ADC_ReadChannel(hadc, &bms->cadc1, &bms->badc1, ADC_TEMP_CH, &voltage_b) != HAL_OK){
+	if(ADC_ReadChannel(&bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, ADC_TEMP_CH, &voltage_b) != HAL_OK){
 		return HAL_ERROR;
 	}
 
 	// calculating voltage before voltage divider
-	if(ADC_GetValue(hadc, &bms->cadc1, &bms->badc1, VCC_SUPPLY_VOLTAGE, ADC_TEMP_CH, &voltage_f) != HAL_OK){
+	if(ADC_GetValue(&bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, VCC_SUPPLY_VOLTAGE, ADC_TEMP_CH, &voltage_f) != HAL_OK){
 		return HAL_ERROR;
 	}
 
@@ -103,12 +103,12 @@ HAL_StatusTypeDef BMS_ADC_Read_Temperature(BMS_TypeDef* bms, ADC_HandleTypeDef* 
 	return HAL_OK;
 }
 
-HAL_StatusTypeDef BMS_ADC_Read_Current(BMS_TypeDef* bms, ADC_HandleTypeDef* hadc){
+HAL_StatusTypeDef BMS_ADC_Read_Current(BMS_TypeDef* bms){
 	uint16_t current_b = 0;     // binary type of current
 	float current_f    = 0.0f;  // real type of current
 
 	// reading channel's value
-	if(ADC_ReadChannel(hadc, &bms->cadc1, &bms->badc1, ADC_CURRENT_CH, &current_b) != HAL_OK){
+	if(ADC_ReadChannel(&bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, ADC_CURRENT_CH, &current_b) != HAL_OK){
 		return HAL_ERROR;
 	}
 

@@ -25,6 +25,19 @@
 extern "C" {
 #endif
 
+/* Includes --------------------------------------------------------------------------------  */
+#include "BMS_Types.h"
+
+/* Variables ---------------------------------------------------------*/
+extern BMS_TypeDef bms;
+
+/* Macros ----------------------------------------------------------------------------------  */
+/*
+	 ==============================================================================
+						   ##### CAN1 TX MACROS #####
+	 ==============================================================================
+*/
+
 // CAN Scaling parameters
 #define VOLTAGE_OFFSET          12.0f
 #define VOLTAGE_GAIN 		    0.0059f
@@ -58,12 +71,52 @@ extern "C" {
 #define BMS_THERM8_ID			138
 #define BMS_THERM9_ID			139
 
-HAL_StatusTypeDef BMS_CAN_Init(BMS_TypeDef* bms, CAN_HandleTypeDef* bhcan1, CAN_HandleTypeDef* bhcan2);
+/*
+	 ==============================================================================
+						   ##### CAN2 RX MACROS #####
+	 ==============================================================================
+*/
 
-HAL_StatusTypeDef BMS_CAN_AddMessage(BMS_TypeDef* bms, uint32_t Id, uint8_t DLC, uint32_t period);
 
-HAL_StatusTypeDef BMS_CAN_UpdateMsg(BMS_TypeDef* bms);
+
+/* Functions' prototypes ------------------------------------------------------------------  */
+
+HAL_StatusTypeDef BMS_CAN_Init(BMS_TypeDef* bms);
+
+HAL_StatusTypeDef BMS_CAN_Add_Message(BMS_TypeDef* bms, uint32_t Id, uint8_t DLC, uint32_t period);
+
+HAL_StatusTypeDef BMS_CAN_Add_PeripFrames(BMS_TypeDef* bms);
+
+void 			  BMS_CAN_Get_ADC_Data(uint8_t *data);
+
+void 			  BMS_CAN_Get_Node_Data(uint8_t *data);;
+
+void 			  BMS_CAN_PackCAN2Temps(uint8_t* data, uint8_t thermId);
+
+void 			  BMS_CAN_Get_CAN2_Data_Therm1(uint8_t *data);
+
+void 			  BMS_CAN_Get_CAN2_Data_Therm2(uint8_t *data);
+
+void 			  BMS_CAN_Get_CAN2_Data_Therm3(uint8_t *data);
+
+void 			  BMS_CAN_Get_CAN2_Data_Therm4(uint8_t *data);
+
+void 			  BMS_CAN_Get_CAN2_Data_Therm5(uint8_t *data);
+
+void 			  BMS_CAN_Get_CAN2_Data_Therm6(uint8_t *data);
+
+void 			  BMS_CAN_Get_CAN2_Data_Therm7(uint8_t *data);
+
+void 			  BMS_CAN_Get_CAN2_Data_Therm8(uint8_t *data);
+
+void 			  BMS_CAN_Get_CAN2_Data_Therm9(uint8_t *data);
+
+uint8_t 		  BMS_CAN_GetMSB(uint16_t value);
+
+uint8_t 		  BMS_CAN_GetLSB(uint16_t value);
 
 HAL_StatusTypeDef BMS_CAN_ScallingParams(BMS_TypeDef* bms, uint8_t channel, float value_f);
+
+void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan);
 
 #endif	/* INC_BMS_CAN_DRIVER_H_ */

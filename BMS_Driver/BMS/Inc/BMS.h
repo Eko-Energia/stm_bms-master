@@ -25,57 +25,26 @@
 extern "C" {
 #endif
 
-// Includes
-#include "adc_driver.h"
-#include "can_driver.h"
-#include "can_id_list.h"
-#include "string.h"
-#include "BMS_ADC_driver.h"
-#include "BMS_CAN_driver.h"
-#include "BMS_TIM_driver.h"
+/* Includes --------------------------------------------------------------------------------  */
+#include "BMS_Types.h"
 
-/**
-  * @brief  BMS's mode status | enumeration type
-  */
-typedef enum{
-	BMS_NORMAL = 0,
-	BMS_STANDBY,
-	BMS_Error
-}BMS_StatusTypeDef_e;
+/* Macros ----------------------------------------------------------------------------------  */
 
-
-/**
-  * @brief  BMS object type
-  */
-typedef struct{
-	ADC_ChannelsTypeDef  cadc1;														// ADC1's Channels' configurations object
-	ADC_BufferTypeDef	 badc1;														// ADC1's Channels' converted value buffer
-
-	BMS_StatusTypeDef_e  status;
-
-	uint16_t ADC_voltTempCurr[3];
-	uint16_t CAN2_voltageCells[7][9];
-
-	CAN_ScheduledMsgList CAN1_Buff;
-}BMS_TypeDef;
-
-
-// Macros
-#define BMS_VCC_SUPPLY      87.0f
-#define VCC_SUPPLY_VOLTAGE  3.3f
 
 /* Functions Prototypes --------------------------------------------------------------------  */
-HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_HandleTypeDef* bhcan2, TIM_HandleTypeDef* htim);
+HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_HandleTypeDef* bhcan2, TIM_HandleTypeDef* htim, ADC_HandleTypeDef* hadc, SPI_HandleTypeDef* hspi, UART_HandleTypeDef* huart);
 
-HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms, TIM_HandleTypeDef* htim, ADC_HandleTypeDef* hadc);
+HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms);
 
-HAL_StatusTypeDef BMS_Mode_Standby(BMS_TypeDef* bms, TIM_HandleTypeDef* htim);
+HAL_StatusTypeDef BMS_Mode_Standby(BMS_TypeDef* bms);
 
-HAL_StatusTypeDef BMS_Mode_Error(BMS_TypeDef* bms, TIM_HandleTypeDef* htim);
+HAL_StatusTypeDef BMS_Mode_Error(BMS_TypeDef* bms);
 
 HAL_StatusTypeDef BMS_Log_Data(BMS_TypeDef* bms);
 
+HAL_StatusTypeDef BMS_Start_Peripherals(BMS_TypeDef* bms);
 
+HAL_StatusTypeDef BMS_Stop_Peripherals(BMS_TypeDef* bms);
 
 
 #endif /* INC_BMS_H_ */

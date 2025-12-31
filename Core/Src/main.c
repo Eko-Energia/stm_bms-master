@@ -107,13 +107,13 @@ int main(void)
   MX_NVIC_Init();
   /* USER CODE BEGIN 2 */
 
+
   /*BMS---------------------------------------------------------*/
   // Init of BMS to launch workflow
-  if(BMS_Init(&bms, &hcan1, &hcan2, &htim4) != HAL_OK){
+  if(BMS_Init(&bms, &hcan1, &hcan2, &htim4, &hadc1, &hspi1, &huart1) != HAL_OK){
 	  Error_Handler();
   }
 
-  BMS_
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -124,7 +124,7 @@ int main(void)
 		 case BMS_NORMAL:
 
 			 // Launching Normal mode for BMS
-			 if(BMS_Mode_Normal(&bms, &htim4, &hadc1) != HAL_OK){
+			 if(BMS_Mode_Normal(&bms) != HAL_OK){
 				 Error_Handler();
 			 }
 
@@ -132,14 +132,15 @@ int main(void)
 		 case BMS_STANDBY:
 
 			 // Launching Normal mode for BMS
-			 if(BMS_Mode_Standby(&bms, &htim4) != HAL_OK){
+			 if(BMS_Mode_Standby(&bms) != HAL_OK){
 				 Error_Handler();
 			 }
 
 			 break;
 		 case BMS_Error:
+
 			 // Launching Normal mode for BMS
-			 if(BMS_Mode_Error(&bms, &htim4) != HAL_OK){
+			 if(BMS_Mode_Error(&bms) != HAL_OK){
 				 Error_Handler();
 			 }
 
@@ -148,6 +149,11 @@ int main(void)
 			 break;
 
 	 }
+
+	 // blink LED in correct, for current BMS's status, way
+	if(BMS_TIM_LED_Blink(&bms) != HAL_OK){
+		Error_Handler();
+	}
 
     /* USER CODE END WHILE */
 
@@ -230,7 +236,7 @@ static void MX_NVIC_Init(void)
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
-	BMS_Mode_Error(&bms, &htim4);
+	BMS_Mode_Error(&bms);
   /* User can add his own implementation to report the HAL error return state */
 
   __disable_irq();

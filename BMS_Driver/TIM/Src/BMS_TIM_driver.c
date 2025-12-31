@@ -16,7 +16,7 @@
 
 #include "BMS_TIM_driver.h"
 
-HAL_StatusTypeDef BMS_TIM_LED_Blink(BMS_StatusTypeDef_e status, TIM_HandleTypeDef* htim){
+HAL_StatusTypeDef BMS_TIM_LED_Blink(BMS_TypeDef* bms){
 
 	// Universal variables
 	uint32_t currentTick = HAL_GetTick();
@@ -27,7 +27,7 @@ HAL_StatusTypeDef BMS_TIM_LED_Blink(BMS_StatusTypeDef_e status, TIM_HandleTypeDe
 
 
 	// state machine
-	switch(status){
+	switch(bms->status){
 		case BMS_NORMAL:
 
 			// Turning on Green LED | Blink
@@ -36,10 +36,10 @@ HAL_StatusTypeDef BMS_TIM_LED_Blink(BMS_StatusTypeDef_e status, TIM_HandleTypeDe
 			}else{
 				duty = 0;					// otherwise, turn off green led
 			}
-			__HAL_TIM_SET_COMPARE(htim, TIM_GREEN_LD, duty);
+			__HAL_TIM_SET_COMPARE(&bms->htim, TIM_GREEN_LD, duty);
 
 			// Turning off Red Led
-			__HAL_TIM_SET_COMPARE(htim, TIM_RED_LD, 0);
+			__HAL_TIM_SET_COMPARE(&bms->htim, TIM_RED_LD, 0);
 
 			break;
 		case BMS_STANDBY:
@@ -61,19 +61,19 @@ HAL_StatusTypeDef BMS_TIM_LED_Blink(BMS_StatusTypeDef_e status, TIM_HandleTypeDe
 			}
 
 			// Turning on Green LED | Duty Cycle = 75%
-			__HAL_TIM_SET_COMPARE(htim, TIM_GREEN_LD, duty);
+			__HAL_TIM_SET_COMPARE(&bms->htim, TIM_GREEN_LD, duty);
 
 			// Turning off Red Led
-			__HAL_TIM_SET_COMPARE(htim, TIM_RED_LD, 0);
+			__HAL_TIM_SET_COMPARE(&bms->htim, TIM_RED_LD, 0);
 
 			break;
 		case BMS_Error:
 
 			// Turning off Green LED
-			__HAL_TIM_SET_COMPARE(htim, TIM_GREEN_LD, 0);
+			__HAL_TIM_SET_COMPARE(&bms->htim, TIM_GREEN_LD, 0);
 
 			// Turning on Red Led
-			__HAL_TIM_SET_COMPARE(htim, TIM_RED_LD, 999);
+			__HAL_TIM_SET_COMPARE(&bms->htim, TIM_RED_LD, 999);
 
 			break;
 		default:
