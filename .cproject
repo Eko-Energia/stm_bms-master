@@ -50,8 +50,8 @@
 									<listOptionValue builtIn="false" value="../EKO_Drivers/ADC/Inc"/>
 									<listOptionValue builtIn="false" value="../BMS_Driver/BMS/Inc"/>
 									<listOptionValue builtIn="false" value="../BMS_Driver/CAN/Inc"/>
-									<listOptionValue builtIn="false" value="../BMS_Driver/ADC/Inc"/>
 									<listOptionValue builtIn="false" value="../BMS_Driver/TIM/Inc"/>
+									<listOptionValue builtIn="false" value="../BMS_Driver/ADC/Inc"/>
 								</option>
 								<inputType id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c.798392651" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c"/>
 							</tool>

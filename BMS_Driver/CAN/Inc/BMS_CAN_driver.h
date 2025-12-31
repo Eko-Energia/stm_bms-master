@@ -25,6 +25,10 @@
 extern "C" {
 #endif
 
+/* Includes --------------------------------------------------------------------------------  */
+#include "BMS_Types.h"
+
+/* Macros ----------------------------------------------------------------------------------  */
 // CAN Scaling parameters
 #define VOLTAGE_OFFSET          12.0f
 #define VOLTAGE_GAIN 		    0.0059f
@@ -57,6 +61,8 @@ extern "C" {
 #define BMS_THERM7_ID			137
 #define BMS_THERM8_ID			138
 #define BMS_THERM9_ID			139
+
+/* Functions' prototypes ------------------------------------------------------------------  */
 
 HAL_StatusTypeDef BMS_CAN_Init(BMS_TypeDef* bms, CAN_HandleTypeDef* bhcan1, CAN_HandleTypeDef* bhcan2);
 

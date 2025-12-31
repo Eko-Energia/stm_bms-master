@@ -21,16 +21,19 @@
 
 #pragma once
 
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/* Includes ----------------------------------------------------------------------------------  */
+#include "BMS_Types.h"
 
-// Macros
-#define TIM_GREEN_LD		TIM_CHANNEL_4
-#define TIM_RED_LD   		TIM_CHANNEL_3
 
-// Functions' prototypes
+/* Macros ------------------------------------------------------------------------------------  */
+
+
+/* Functions' prototypes ---------------------------------------------------------------------  */
 HAL_StatusTypeDef BMS_TIM_LED_Blink(BMS_StatusTypeDef_e status, TIM_HandleTypeDef* htim);
 
 

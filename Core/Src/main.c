@@ -107,13 +107,13 @@ int main(void)
   MX_NVIC_Init();
   /* USER CODE BEGIN 2 */
 
+
   /*BMS---------------------------------------------------------*/
   // Init of BMS to launch workflow
   if(BMS_Init(&bms, &hcan1, &hcan2, &htim4) != HAL_OK){
 	  Error_Handler();
   }
 
-  BMS_
   /* USER CODE END 2 */
 
   /* Infinite loop */
