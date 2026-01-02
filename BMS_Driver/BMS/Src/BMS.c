@@ -63,7 +63,7 @@ HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms){
 
 	// Read ADC's channels
 	if(BMS_ADC_ReadValues(bms) != HAL_OK){
-		Error_Handler();
+		return HAL_ERROR;
 	}
 
 	// Send Data via CAN
