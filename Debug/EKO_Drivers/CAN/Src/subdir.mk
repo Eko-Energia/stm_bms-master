@@ -16,7 +16,7 @@ C_DEPS += \
 
 # Each subdirectory must supply rules for building sources it contributes
 EKO_Drivers/CAN/Src/%.o EKO_Drivers/CAN/Src/%.su EKO_Drivers/CAN/Src/%.cyclo: ../EKO_Drivers/CAN/Src/%.c EKO_Drivers/CAN/Src/subdir.mk
-	arm-none-eabi-gcc "$<" -mcpu=cortex-m3 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F105xC -c -I../Core/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -I../EKO_Drivers/CAN/Inc -I../Drivers/CMSIS/Device/ST/STM32F1xx/Include -I../Drivers/CMSIS/Include -I../EKO_Drivers/ADC/Inc -I../BMS_Driver/BMS/Inc -I../BMS_Driver/CAN/Inc -I../BMS_Driver/TIM/Inc -I../BMS_Driver/ADC/Inc -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"$(@:%.o=%.d)" -MT"$@" --specs=nano.specs -mfloat-abi=soft -mthumb -o "$@"
+	arm-none-eabi-gcc "$<" -mcpu=cortex-m3 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F105xC -c -I../Core/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -I../EKO_Drivers/CAN/Inc -I../Drivers/CMSIS/Device/ST/STM32F1xx/Include -I../Drivers/CMSIS/Include -I../EKO_Drivers/ADC/Inc -I../BMS_Driver/BMS/Inc -I../BMS_Driver/CAN/Inc -I../BMS_Driver/ADC/Inc -I../BMS_Driver/NRF905/Inc -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"$(@:%.o=%.d)" -MT"$@" --specs=nano.specs -mfloat-abi=soft -mthumb -o "$@"
 
 clean: clean-EKO_Drivers-2f-CAN-2f-Src
 

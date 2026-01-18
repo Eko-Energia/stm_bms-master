@@ -22,7 +22,6 @@
 #include "can.h"
 #include "dma.h"
 #include "spi.h"
-#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -101,7 +100,6 @@ int main(void)
   MX_SPI1_Init();
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
-  MX_TIM4_Init();
 
   /* Initialize interrupts */
   MX_NVIC_Init();
@@ -110,7 +108,7 @@ int main(void)
 
   /*BMS---------------------------------------------------------*/
   // Init of BMS to launch workflow
-  if(BMS_Init(&bms, &hcan1, &hcan2, &htim4, &hadc1, &hspi1, &huart1) != HAL_OK){
+  if(BMS_Init(&bms, &hcan1, &hcan2, &hadc1, &hspi1, &huart1) != HAL_OK){
 	  Error_Handler();
   }
 
@@ -125,15 +123,12 @@ int main(void)
 
 			 // Launching Normal mode for BMS
 			 if(BMS_Mode_Normal(&bms) != HAL_OK){
-				 Error_Handler();
-			 }
 
-			 break;
-		 case BMS_STANDBY:
+				 // Changing status in case error occurred during Active status process
+				 if(BMS_Status_Change(&bms, BMS_Error) != HAL_OK){
+					 Error_Handler();
+				 }
 
-			 // Launching Normal mode for BMS
-			 if(BMS_Mode_Standby(&bms) != HAL_OK){
-				 Error_Handler();
 			 }
 
 			 break;
@@ -151,7 +146,7 @@ int main(void)
 	 }
 
 	 // blink LED in correct, for current BMS's status, way
-	if(BMS_TIM_LED_Blink(&bms) != HAL_OK){
+	if(BMS_LED_Blink(&bms) != HAL_OK){
 		Error_Handler();
 	}
 
@@ -236,6 +231,8 @@ static void MX_NVIC_Init(void)
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
+
+
 	BMS_Mode_Error(&bms);
   /* User can add his own implementation to report the HAL error return state */
 

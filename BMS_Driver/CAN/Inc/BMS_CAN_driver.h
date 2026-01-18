@@ -115,7 +115,7 @@ uint8_t 		  BMS_CAN_GetMSB(uint16_t value);
 
 uint8_t 		  BMS_CAN_GetLSB(uint16_t value);
 
-HAL_StatusTypeDef BMS_CAN_ScallingParams(BMS_TypeDef* bms, uint8_t channel, float value_f);
+HAL_StatusTypeDef BMS_CAN_ScallingParams(BMS_TypeDef* bms, uint8_t channel, float* value_f);
 
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan);
 

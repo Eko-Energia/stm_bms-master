@@ -13,12 +13,20 @@
   *
   ******************************************************************************
   */
+
+/* Includes ----------------------------------------------------------------------------------  */
 #include "BMS.h"
 
-HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_HandleTypeDef* bhcan2, TIM_HandleTypeDef* htim, ADC_HandleTypeDef* hadc, SPI_HandleTypeDef* hspi, UART_HandleTypeDef* huart){
+/* Functions' bodies -------------------------------------------------------------------------  */
+
+HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_HandleTypeDef* bhcan2, ADC_HandleTypeDef* hadc, SPI_HandleTypeDef* hspi, UART_HandleTypeDef* huart){
 
 	// assigning handle objects
-
+	bms->bmsADC.hadc   = *hadc;
+	bms->bmsCAN.bhcan1 = *bhcan1;
+	bms->bmsCAN.bhcan2 = *bhcan2;
+	bms->huart1		   = *huart;
+	bms->hspi1		   = *hspi;
 
 	// setting default status (normal) for BMS
 	bms->status     = BMS_NORMAL;
@@ -29,18 +37,6 @@ HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_Han
 
 	// reseting array which stores cells' voltages, whose values are provided by CAN2
 	for(int i = 0; i< 7; ++i){ memset(bms->bmsCAN.CAN2_temperatureCells[i], 0, sizeof(bms->bmsCAN.CAN2_temperatureCells[i][0]));}
-
-
-	// Starting timers on channels 4 for handling blinking green LEDs
-	if(HAL_TIM_PWM_Start(&bms->htim, TIM_GREEN_LD) != HAL_OK){
-		return HAL_ERROR;
-    }
-
-
-	// Starting timer on channels 3 for handling blinking red LEDs
-	if(HAL_TIM_PWM_Start(&bms->htim, TIM_RED_LD) != HAL_OK){
-		return HAL_ERROR;
-  	}
 
 	if(BMS_Start_Peripherals(bms) != HAL_OK){
 		return HAL_ERROR;
@@ -59,6 +55,7 @@ HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms){
 			return HAL_ERROR;
 		}
 
+		bms->prevStatus = BMS_NORMAL;
 	}
 
 	// Read ADC's channels
@@ -76,15 +73,10 @@ HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms){
 	return HAL_OK;
 }
 
-HAL_StatusTypeDef BMS_Mode_Standby(BMS_TypeDef* bms){
-
-
-
-	return HAL_OK;
-}
 
 HAL_StatusTypeDef BMS_Mode_Error(BMS_TypeDef* bms){
 
+	// restrict amount of sent CAN frames, send only frame with error code
 
 
 
@@ -105,7 +97,7 @@ HAL_StatusTypeDef BMS_Start_Peripherals(BMS_TypeDef* bms){
 	 ==============================================================================
 */
 	// Launching DMA for ADC
-	if(HAL_ADC_Start_DMA(&bms->bmsADC.hadc, (uint32_t*)bms->bmsADC.badc1.idma.BufferADC, ADC_BUFF_SIZE) != HAL_OK){
+	if(HAL_ADC_Start_DMA(&bms->bmsADC.hadc, bms->bmsADC.badc1.idma.BufferADC, ADC_BUFF_SIZE) != HAL_OK){
 		return HAL_ERROR;
 	}
 
@@ -138,6 +130,20 @@ HAL_StatusTypeDef BMS_Start_Peripherals(BMS_TypeDef* bms){
 			return HAL_ERROR;
 		}
 	}
+
+	// Restore CAN frames
+
+
+/*
+	 ==============================================================================
+						   ##### LAUNCHING NRF905 #####
+	 ==============================================================================
+*/
+	// Init and start NRF905
+
+	// Init and start NRF905's SPI controller
+
+	// Init and start NRF905's amplifier (MAX2233)
 
 	return HAL_OK;
 }
@@ -181,6 +187,66 @@ HAL_StatusTypeDef BMS_Stop_Peripherals(BMS_TypeDef* bms){
 		return HAL_ERROR;
 	}
 
+
+	return HAL_OK;
+}
+
+HAL_StatusTypeDef BMS_Status_Change(BMS_TypeDef* bms,BMS_StatusTypeDef_e status){
+
+	// check if given status is correct
+	if(status != BMS_NORMAL && status != BMS_Error){
+		return HAL_ERROR;
+	}
+
+	// saving previous status
+	bms->prevStatus = bms->status;
+
+	// overwriting current status
+	bms->status = status;
+
+	return HAL_OK;
+}
+
+HAL_StatusTypeDef BMS_LED_Blink(BMS_TypeDef* bms){
+
+	// Universal variables
+	uint32_t lastTick = HAL_GetTick() - 1;
+	uint16_t duty = 0;
+
+
+	if(lastTick - HAL_GetTick() - 1 >= 500){
+
+		// state machine
+		switch(bms->status){
+			case BMS_NORMAL:
+
+				// in normal state blink green LED and turn off red led
+				HAL_GPIO_TogglePin(GREEN_LD_GPIO_Port, GREEN_LD_Pin);
+				HAL_GPIO_WritePin(RED_LD_GPIO_Port, RED_LD_Pin, GPIO_PIN_RESET);
+
+
+				break;
+			case BMS_Error:
+
+				// in error state blink red LED and turn off green led
+				HAL_GPIO_WritePin(GREEN_LD_GPIO_Port, GREEN_LD_Pin, GPIO_PIN_RESET);
+				HAL_GPIO_TogglePin(RED_LD_GPIO_Port, RED_LD_Pin);
+
+
+
+				break;
+			default:
+
+				// returning error in case of wrong state
+				return HAL_ERROR;
+
+				break;
+		}
+
+
+		// overwrite last tick
+		lastTick = HAL_GetTick() - 1;
+	}
 
 	return HAL_OK;
 }

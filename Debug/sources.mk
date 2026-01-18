@@ -25,7 +25,7 @@ SUBDIRS := \
 BMS_Driver/ADC/Src \
 BMS_Driver/BMS/Src \
 BMS_Driver/CAN/Src \
-BMS_Driver/TIM/Src \
+BMS_Driver/NRF905/Src \
 Core/Src \
 Core/Startup \
 Drivers/STM32F1xx_HAL_Driver/Src \

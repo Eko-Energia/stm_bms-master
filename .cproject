@@ -50,8 +50,8 @@
 									<listOptionValue builtIn="false" value="../EKO_Drivers/ADC/Inc"/>
 									<listOptionValue builtIn="false" value="../BMS_Driver/BMS/Inc"/>
 									<listOptionValue builtIn="false" value="../BMS_Driver/CAN/Inc"/>
-									<listOptionValue builtIn="false" value="../BMS_Driver/TIM/Inc"/>
 									<listOptionValue builtIn="false" value="../BMS_Driver/ADC/Inc"/>
+									<listOptionValue builtIn="false" value="../BMS_Driver/NRF905/Inc"/>
 								</option>
 								<inputType id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c.798392651" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c"/>
 							</tool>
@@ -81,7 +81,7 @@
 						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="BMS_Driver/ADC/Src"/>
 						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="BMS_Driver/BMS/Src"/>
 						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="BMS_Driver/CAN/Src"/>
-						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="BMS_Driver/TIM/Src"/>
+						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="BMS_Driver/NRF905/Src"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Core"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Drivers"/>
 						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="EKO_Drivers"/>
