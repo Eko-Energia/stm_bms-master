@@ -36,13 +36,13 @@ extern "C" {
 #define 			SQR_3				    3
 #define				SQR_4					4
 
-#define 			ADC_MAX_CHANNELS       3											// maximum number of ADC's channels
+#define 			ADC_MAX_CHANNELS       16											// maximum number of ADC's channels
 #define 			ADC_AVERAGED_MEASURES  5											// common number of measures from one channel to be averaged
 #define 			ADC_BUFF_SIZE 		   (ADC_AVERAGED_MEASURES * ADC_MAX_CHANNELS)	// ADC Buffers' Size, includes size of all channels and their number of averaged measures
 
 /* Variables--------------------------------------------------------------------------- */
 static volatile int ADC_CONVERTED_CHANNELS =  4;	// default value of converted which will be overwrite by program in runtime after auto-detect process
-#define             ADC_BUFF_SIZE_TEST (int i ) (ADC_CONVERTED_CHANNELS * i)
+
 
 
 /* Typedefs --------------------------------------------------------------------------- */
@@ -181,7 +181,7 @@ typedef struct{
 
 	/* Macros Function type for core of F2 family-------------------------------------- */
 	#define __ADC_IS_DMA_MULTIMODE                                                          												\
-											((READ_REG(ADC_COMMON->CCR, ADC_CCR_MULTI_Msk) == ADC_CCR_MULTI_0) ? 0U : 1U)
+											((READ_REG(((ADC_Common_TypeDef *)(ADC1_BASE + ADC_CCR_OFFSET))->CCR, ADC_CCR_DUAL) != 0U) ? 1U : 0U)
 
 	#define __ADC_IS_CONV_STARTED(__HANDLE__)                                               												\
 											(((((__HANDLE__)->Instance->SR) >> ADC_SR_STRT_Pos) & 0x1U))
@@ -269,9 +269,14 @@ typedef struct{
 
 #elif defined(STM32F3_FAMILY)
 
+	#include "stm32f3xx.h"			// Including lib, which contains READ_REG and READ_BIT functions
+
+	#define  ADC_CCR_OFFSET 0x300	// CCR reg address offset from base ADC1 address
+
+
 	/* Macros Function type for core of F3 family-------------------------------------- */
-	#define __ADC_IS_DMA_MULTIMODE                                                          												\
-											((READ_REG(ADC_COMMON->CCR, ADC12_CCR_MULTI_Msk) == 0U) ? 0U : 1U)
+	#define __ADC_IS_DMA_MULTIMODE(__HANDLE__)                                                          												\
+											(((READ_REG(*(volatile uint32_t *)(ADC1_BASE + ADC_CCR_OFFSET)) >> ADC_CCR_DUAL_Pos) & 0x1U) == 0U ? 0U : 1U)
 
 	#define __ADC_IS_CONV_STARTED(__HANDLE__)                                               												\
 											(((((__HANDLE__)->Instance->CR >> ADC_CR_ADSTART_Pos) & 0x1U)))
@@ -365,7 +370,7 @@ typedef struct{
 
 	/* Macros Function type for core of F4 family-------------------------------------- */
 	#define __ADC_IS_DMA_MULTIMODE                                                          												\
-											((READ_REG(ADC_COMMON->CCR, ADC_CCR_MULTI_Msk) == ADC_CCR_MULTI_0) ? 0U : 1U)
+											((READ_REG(((ADC_Common_TypeDef *)(ADC1_BASE + ADC_CCR_OFFSET))->CCR, ADC_CCR_DUAL) != 0U) ? 1U : 0U)
 
 	#define __ADC_IS_CONV_STARTED(__HANDLE__)                                               												\
 											(((((__HANDLE__)->Instance->SR) >> ADC_SR_STRT_Pos) & 0x1U))
