@@ -109,27 +109,6 @@ void NRF905_GetConfigData(uint8_t* data){
 
 // NRF905's SPI operations
 
-HAL_StatusTypeDef BMS_NRF905_SPI_ChangeCMD(BMS_TypeDef* bms, NRF905_SPICommandTypeDef command){
-
-	// security check, if correct command was given
-	if(command != NRF905_CMD_WC    &&
-	   command != NRF905_CMD_WR    &&
-	   command != 	NRF905_CMD_WTP &&
-	   command != NRF905_CMD_RTP   &&
-	   command != NRF905_CMD_WTA   &&
-	   command != NRF905_CMD_RTA   &&
-	   command != NRF905_CMD_RRP   &&
-	   command != NRF905_CMD_CC)
-	{
-		return HAL_ERROR;
-	}
-
-	// assigning given command to BMS's NRF905's SPI controller
-	bms->bmsNRF905.spi.selectedCommand = command;
-
-
-	return HAL_OK;
-}
 
 /*
   * @brief  Function that provides NRF905's SPI controller enters given mode
@@ -190,19 +169,84 @@ HAL_StatusTypeDef BMS_NRF905_SPI_ChangeMode(BMS_TypeDef* bms, NRF905_SPIStatusTy
   * @param  uint8_t* rxByte   - pointer to address of received response on sent byte from NRF905
   * @retval HAL_StatusTypeDef - status of communication with NRF905 via SPI, and status of proceeded operation
 */
-HAL_StatusTypeDef NRF905_SPI_TransferReceive(BMS_TypeDef* bms, uint8_t* txByte, uint8_t* rxByte){
+HAL_StatusTypeDef BMS_NRF905_SPI_TransferReceive(BMS_TypeDef* bms, uint8_t* txByte, uint8_t* rxByte){
+
+	// Turning on NRF905 | setting correct state on radio module
+	if(BMS_NRF905_ChangeMode(bms, BMS_NRF905_ON) != HAL_OK){
+		return HAL_ERROR;
+	}
 
 	// Sending and receiving one byte of data
 	if(HAL_SPI_TransmitReceive(&bms->hspi1, txByte, rxByte, 1, HAL_MAX_DELAY) != HAL_OK){
 		return HAL_ERROR;
 	}
 
+
+	// Turning off NRF905 | setting correct state on radio module
+	if(BMS_NRF905_ChangeMode(bms, BMS_NRF905_OFF) != HAL_OK){
+		return HAL_ERROR;
+	}
+
 	return HAL_OK;
 }
 
-HAL_StatusTypeDef NRF905_WriteReg(uint8_t cmd, uint8_t* data, uint8_t len);
+/**
+  * @brief  Function that provides writing given data with its command to NRF905 module's register
+  * @param  BMS_TypeDef* bms     - pointer to BMS object of type BMS_TypeDef, with SPI handle
+  * #param  uint8_t      cmd	 - selected cmd to set SPI module in NRF905 into correct mode, its value can be of: @arg NRF905_CMD
+  * @param  uint8_t*     txByte  - pointer to address of one byte to send it to NRF905
+  * @param  uint8_t      len	 - number of bytes, that will be sent via SPI to NRF905
+  * @retval HAL_StatusTypeDef    - status of communication with NRF905 via SPI, and status of proceeded operation
+*/
+HAL_StatusTypeDef BMS_NRF905_WriteReg(BMS_TypeDef* bms, uint8_t cmd, uint8_t* txData, uint8_t len){
 
-void NRF905_ReadReg(uint8_t cmd, uint8_t* data, uint8_t len);
+	uint8_t* rxDummyByte; 	// init of dummy variable, function should send, but received data won't be needed in further operations
+
+	// sending given command to NRF905 modules
+	if(BMS_NRF905_SPI_TransferReceive(bms, &cmd, rxDummyByte) != HAL_OK){
+		return HAL_ERROR;
+	}
+
+	// sending data, byte after byte
+	for(int i = 0; i < len; ++i){
+
+		if(BMS_NRF905_SPI_TransferReceive(bms, &txData[i], &rxDummyByte) != HAL_OK){
+			return HAL_ERROR;
+		}
+
+	}
+
+	return HAL_OK;
+}
+
+/**
+  * @brief  Function that provides reading NRF905 module's register to data reference
+  * @param  BMS_TypeDef* bms    - pointer to BMS object of type BMS_TypeDef, with SPI handle
+  * @param  uint8_t  	 cmd 	- selected command for SPI module in NRF905 | to read register, its value can be one of macros: @arg NRF905_CMD
+  * @param  uint8_t*     rxByte - pointer to address of received response on sent byte from NRF905
+  * @param  uint8_t      len	- number of bytes, that will be sent via SPI to NRF905
+  * @retval HAL_StatusTypeDef   - status of communication with NRF905 via SPI, and status of proceeded operation
+*/
+HAL_StatusTypeDef BMS_NRF905_ReadReg(BMS_TypeDef* bms, uint8_t cmd, uint8_t* rxData, uint8_t len){
+
+	uint8_t txDummyByte = 0xFF; 	// init of dummy variable, function read register, so sent data won't be needed in further operations
+
+
+	// sending command for SPI module
+	if(BMS_NRF905_SPI_TransferReceive(bms, &txDummyByte, &cmd) != HAL_OK){
+		return HAL_ERROR;
+	}
+
+	// reading register, byte after byte
+	for(int i = 0; i < len; ++i){
+		if(BMS_NRF905_SPI_TransferReceive(bms, &txDummyByte, rxData[i]) != HAL_OK){
+			return HAL_ERROR;
+		}
+	}
+
+	return HAL_OK;
+}
+
 
 // NRF905's amplifier power modes
 /*

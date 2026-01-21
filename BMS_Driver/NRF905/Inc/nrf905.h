@@ -48,23 +48,18 @@ HAL_StatusTypeDef NRF905_Write_TX_Payload(BMS_TypeDef* bms);
 
 HAL_StatusTypeDef NRF905_Write_TX_Address(BMS_TypeDef* bms);
 
-void NRF905_Send(uint32_t Id, uint8_t* data, uint8_t DLC);
+HAL_StatusTypeDef NRF905_Send(BMS_TypeDef* bms, uint32_t Id, uint8_t* data, uint8_t DLC);
 
-void NRF905_GetConfigData(uint8_t* data);
-
-HAL_StatusTypeDef BMS_NRF905_SPI_ChangeMode(BMS_TypeDef* bms, NRF905_SPIStatusTypeDef_e status);
-
+void 			  NRF905_GetConfigData(uint8_t* data);
 
 // NRF905's SPI operations
+HAL_StatusTypeDef BMS_NRF905_SPI_ChangeCMD(BMS_TypeDef* bms);
 
-HAL_StatusTypeDef BMS_NRF905_SPI_ChangeCMD(BMS_TypeDef* bms, NRF905_SPICommandTypeDef command);
+HAL_StatusTypeDef BMS_NRF905_SPI_TransferReceive(BMS_TypeDef* bms, uint8_t* txByte, uint8_t* rxByte);
 
-HAL_StatusTypeDef NRF905_SPI_TransferReceive(BMS_TypeDef* bms, uint8_t* txByte, uint8_t* rxByte);
+HAL_StatusTypeDef BMS_NRF905_WriteReg(BMS_TypeDef* bms, uint8_t cmd, uint8_t* data, uint8_t len);
 
-void NRF905_WriteReg(uint8_t cmd, uint8_t* data, uint8_t len);
-
-void NRF905_ReadReg(uint8_t cmd, uint8_t* data, uint8_t len);
-
+HAL_StatusTypeDef BMS_NRF905_ReadReg(BMS_TypeDef* bms, uint8_t cmd, uint8_t* data, uint8_t len);
 
 
 

@@ -71,20 +71,6 @@ typedef enum{
 
 }NRF905_SPIStatusTypeDef_e;
 
-/**
-  * @brief  BMS's NRF905's SPI selected command definition
-  */
-typedef enum{
-	NRF905_CMD_WC  	= 0x00,																/*<Write configuration register>*/
-	NRF905_CMD_WR  	= 0x10,																/*<Read  configuration register>*/
-	NRF905_CMD_WTP 	= 0x20,																/*<Write TX payload>*/
-	NRF905_CMD_RTP  = 0x21,																/*<Read  TX payload>*/
-	NRF905_CMD_WTA  = 0x22,																/*<Write TX address>*/
-	NRF905_CMD_RTA  = 0x23,																/*<Read  TX address>*/
-	NRF905_CMD_RRP  = 0x24,																/*<Read  RX payload>*/
-	NRF905_CMD_CC   = 0x80																/*<Special command for fast setting CH_NO, HFREQ_PLL, PA_PWR in CONFIGURATION REGISTER>*/
-
-}NRF905_SPICommandTypeDef;
 
 /**
   * @brief  BMS's NRF905's amplifier status definition
@@ -134,23 +120,78 @@ typedef struct{
   */
 typedef struct{
 
-	uint32_t RX_ADDRESS;
+	uint32_t RX_ADDRESS;																/*<RX address (default: E7E7E7E7),
+																						   used bytes depend on RX_AFW						>*/
 
-	uint16_t CH_NO       : 9;
+	uint16_t CH_NO       : 9;															/*<Sents center frequency (default: 108):
+																							fr = (422.4+CH_NO/100)(1 + HFREQ_PLL)    		>*/
 
-	uint8_t  HFREQ_PLL   : 1;
-	uint8_t  PA_PWR      : 2;
-	uint8_t  RX_RED_PWR  : 1;
-	uint8_t  AUTO_RETRAN : 1;
-	uint8_t  RX_AFW      : 3;
-	uint8_t  TX_AFW      : 3;
-	uint8_t  RX_PW       : 6;
-	uint8_t  TX_PW       : 6;
-	uint8_t  UP_CLK_FREQ : 2;
-	uint8_t  UP_CLK_EN   : 1;
-	uint8_t  XOF         : 3;
-	uint8_t  CRC_EN		 : 1;
-	uint8_t  CRC_MODE    : 1;
+	uint8_t  HFREQ_PLL   : 1;															/*<Sets PLL in 433MHz or 868/915 MHz mode (default: 0)
+																							- 0 - Chip operating in 433 MHz mode
+																							- 1 - Chip operating in 868/915 MHz mode 		>*/
+
+	uint8_t  PA_PWR      : 2;															/*<Output power (default: 00):
+																							- 00 - -10dBm
+																							- 01 - -2dBm
+																							- 10 - +6dBm
+																							- 11 - +10dBm 							 		>*/
+
+	uint8_t  RX_RED_PWR  : 1;															/*<Reduces current in RX Mode by 1.6mA (default: 0):
+																							- 0 - Normal operation
+																							- 1 - Reduced power								>*/
+
+	uint8_t  AUTO_RETRAN : 1;															/*<Auto retransmission in ShockBurst TX(default: 0):
+																							- 0 - No retransmission
+																							- 1 - Retransmission of data packet				>*/
+
+	uint8_t  RX_AFW      : 3;															/*<RX address width (default: 100):
+																							- 001 - 1 byte  RX address width
+																							- 100 - 4 bytes RX address width				>*/
+
+	uint8_t  TX_AFW      : 3;															/*<TX address width (default: 100):
+																							- 001 - 1 byte  TX address width
+																							- 100 - 4 bytes TX address width				>*/
+
+	uint8_t  RX_PW       : 6;															/*<RX payload field width (default: 100000):
+																							- 000001 - 1 byte  RX payload field width
+																							- 000010 - 2 bytes RX payload field width
+																								•
+																								•
+																								•
+																							- 100000 - 32 bytes RX payload field width		>*/
+
+	uint8_t  TX_PW       : 6;															/*<TX payload field width (default: 100000):
+																							- 000001 - 1 byte  TX payload field width
+																							- 000010 - 2 bytes TX payload field width
+																								•
+																								•
+																								•
+																							- 100000 - 32 bytes TX payload field width		>*/
+
+	uint8_t  UP_CLK_FREQ : 2;															/*<Output clock frequency (default: 11):
+																							- 00 - 4   MHz
+																							- 01 - 2   MHz
+																							- 10 - 1   MHZ
+																							- 11 - 500 kHz									>*/
+
+	uint8_t  UP_CLK_EN   : 1;															/*<Output clock enable (default: 1):
+																							- 0 - No external clock signal available
+																							- 1 - External clock signal enabled				>*/
+
+	uint8_t  XOF         : 3;															/*<Crystal oscillator frequency (default: 100):
+																							- 000 - 4  MHz
+																							- 001 - 8  Mhz
+																							- 010 - 12 MHz
+																							- 011 - 16 MHz
+																							- 100 - 20 MHz									>*/
+
+	uint8_t  CRC_EN		 : 1;															/*<CRC Check enable (default: 1):
+																							- 0 - Disable
+																							- 1 - Enable									>*/
+
+	uint8_t  CRC_MODE    : 1;															/*<CRC- mode (default: 1):
+																							- 0 - 8  CRC check bit
+																							- 1 - 16 CRC check bit							>*/
 
 	void		(*GetRFConfig)(uint8_t * data);
 
@@ -160,7 +201,9 @@ typedef struct{
   * @brief  NRF905's object typedef
   */
 typedef struct{
-	NRF905_AmplifierStatusTypeDef_e status;
+
+	NRF905_AmplifierStatusTypeDef_e status;													/*<NRF905's Amplifier Status>*/
+
 }NRF905_AmplifierTypeDef;
 
 
@@ -170,8 +213,7 @@ typedef struct{
   */
 typedef struct{
 
-	NRF905_SPIStatusTypeDef_e  	  status;											/*< NRF905's SPI controller status>*/
-	NRF905_SPICommandTypeDef 	  selectedCommand;									/*< NRF905's SPI selected CMD for operations>*/
+	NRF905_SPIStatusTypeDef_e  	  status;													/*< NRF905's SPI controller status>*/
 
 }NRF905_SPITypeDef;
 
@@ -179,15 +221,15 @@ typedef struct{
   * @brief  NRF905 object typedef
   */
 typedef struct{
-	NRF905_AmplifierTypeDef       amplifier;									    /*< NRF905's amplifier object>*/
-	NRF905_SPITypeDef		      spi;												/*< NRF905's SPI object>*/
-	NRF905_StatusTypeDef_e     	  status;										    /*< NRF905's status>*/
+	NRF905_AmplifierTypeDef       amplifier;									    		/*< NRF905's amplifier object>*/
+	NRF905_SPITypeDef		      spi;														/*< NRF905's SPI object>*/
+	NRF905_StatusTypeDef_e     	  status;										    		/*< NRF905's status>*/
 
-	NRF905_RFConfigurationTypeDef nrfConfig;								        /*< NRF905's configuration>*/
+	NRF905_RFConfigurationTypeDef nrfConfig;								        		/*< NRF905's configuration>*/
 
-	uint32_t 					  selectedAddr;
+	uint32_t 					  selectedAddr;												/*< NRF905's selected address for SPI operations>*/
 
-	void						  (*GetPayload)(uint8_t* data);
+	void						  (*GetPayload)(uint8_t* data);								/*< Fetches and organize data to be send via RF>*/
 
 }NRF905_TypeDef;
 
@@ -198,34 +240,50 @@ typedef struct{
 typedef struct{
 
 
-	BMS_StatusTypeDef_e  status;													/*< Current BMS status>*/
-	BMS_StatusTypeDef_e  prevStatus;												/*< Previous BMS status in case status change occurred>*/
+	BMS_StatusTypeDef_e  status;															/*< Current BMS status>*/
+	BMS_StatusTypeDef_e  prevStatus;														/*< Previous BMS status in case status change occurred>*/
 
 
-	UART_HandleTypeDef  huart1;														/*< UART handle used in BMS's firmware | logging   data via UART1>*/
-	SPI_HandleTypeDef   hspi1;														/*< SPI  handle used in BMS's firmware | sending   data via NRF905>*/
+	UART_HandleTypeDef  huart1;																/*< UART handle used in BMS's firmware | logging   data via UART1>*/
+	SPI_HandleTypeDef   hspi1;																/*< SPI  handle used in BMS's firmware | sending   data via NRF905>*/
 
-	CAN_BMSTypeDef 		bmsCAN;														/*< BMS's CAN 	 custom typedef object>*/
-	ADC_BMSTypeDef 		bmsADC;														/*< BMS's ADC 	 custom typedef object>*/
-	NRF905_TypeDef      bmsNRF905;													/*< BMS's NRF905 custom typedef object>*/
+	CAN_BMSTypeDef 		bmsCAN;																/*< BMS's CAN 	 custom typedef object>*/
+	ADC_BMSTypeDef 		bmsADC;																/*< BMS's ADC 	 custom typedef object>*/
+	NRF905_TypeDef      bmsNRF905;															/*< BMS's NRF905 custom typedef object>*/
 
 }BMS_TypeDef;
 
 
 /* Macros ------------------------------------------------------------------------------------  */
 
-//TIM
-#define TIM_GREEN_LD		TIM_CHANNEL_4
-#define TIM_RED_LD   		TIM_CHANNEL_3
-
 // ADC
-#define ADC_VOLTAGE_CH 12
-#define ADC_CURRENT_CH 11
-#define ADC_TEMP_CH    10
+
+/*
+ *  @brief ADC Channels' numbers macros definitions
+ * */
+#define ADC_VOLTAGE_CH 12																	/*<12th channel of ADC1>*/
+#define ADC_CURRENT_CH 11																	/*<11th channel of ADC1>*/
+#define ADC_TEMP_CH    10																	/*<10th channel of ADC1>*/
 
 // STM32F105
-#define BMS_VCC_SUPPLY      87.0f
-#define VCC_SUPPLY_VOLTAGE  3.3f
+
+#define BMS_VCC_SUPPLY      87.0f															/*<MAX DC Supply Voltage of BMS Master PCB>*/
+#define VCC_SUPPLY_VOLTAGE  3.3f															/*<MAX DC Supply Voltage for STM32f105>*/
+
+// NRF905
+
+/**
+  * @brief  BMS's NRF905's SPI selected commands' macros definitions
+  * @note   NRF905_CMD
+  */
+#define NRF905_CMD_WC  	0x00,																/*<Write configuration register>*/
+#define	NRF905_CMD_WR  	0x10,																/*<Read  configuration register>*/
+#define	NRF905_CMD_WTP 	0x20,																/*<Write TX payload>*/
+#define	NRF905_CMD_RTP  0x21,																/*<Read  TX payload>*/
+#define	NRF905_CMD_WTA  0x22,																/*<Write TX address>*/
+#define	NRF905_CMD_RTA  0x23,																/*<Read  TX address>*/
+#define	NRF905_CMD_RRP  0x24,																/*<Read  RX payload>*/
+#define	NRF905_CMD_CC   0x80																/*<Special command for fast setting CH_NO, HFREQ_PLL, PA_PWR in CONFIGURATION REGISTER>*/
 
 
 #endif /* INC_BMS_TYPES_H_ */
