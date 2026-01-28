@@ -16,3 +16,14 @@
 .bak
 .xlsx
 .dbc
+Debug/
+Release/
+*.elf
+*.list
+*.map
+*.o
+*.d
+*.su
+*.cyclo
+.settings/
+*.mk

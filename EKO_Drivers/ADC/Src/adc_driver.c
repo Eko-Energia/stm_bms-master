@@ -52,25 +52,24 @@ HAL_StatusTypeDef ADC_Init(ADC_HandleTypeDef* hadc, ADC_BufferTypeDef* badc, ADC
 	}
 
 
+	#if !(defined(STM32F2_FAMILY) || defined(STM32F4_FAMILY))
 
-	// check if dual mode is enabled
-	if(__ADC_IS_DMA_MULTIMODE(hadc) == 0){
+			#if defined(STM32F1_FAMILY)
 
-		    // checking if DMA is enabled
-			if(__ADC_IS_DMA_ENABLED(hadc) != 0){
-
-				// starting DMA with ADC in Independent mode
-				if(HAL_ADC_Start_DMA(hadc, (uint32_t*)badc->idma.BufferADC, ADC_BUFF_SIZE) != HAL_OK){
+				// launching calibration for F1 core
+				if(HAL_ADCEx_Calibration_Start(hadc) != HAL_OK){
 					return HAL_ERROR;
 				}
-			}
-	}
 
+			#else
+				// launching calibration for F3 core
+				if(HAL_ADCEx_Calibration_Start(hadc, ADC_SINGLE_ENDED) != HAL_OK){
+					return HAL_ERROR;
+				}
 
-	// launching calibration
-	if(HAL_ADCEx_Calibration_Start(hadc) != HAL_OK){
-		return HAL_ERROR;
-	}
+			#endif
+	#endif
+
 
 	// launching ADC
 	if(HAL_ADC_Start(hadc) != HAL_OK){
@@ -81,6 +80,32 @@ HAL_StatusTypeDef ADC_Init(ADC_HandleTypeDef* hadc, ADC_BufferTypeDef* badc, ADC
 	if(ADC_ConfigGetRanksOfChannels(hadc, cadc, badc)!= HAL_OK){
 		return HAL_ERROR;
 	}
+
+
+	// check if dual mode is enabled
+	if(__ADC_IS_DMA_MULTIMODE(hadc) == 0){
+
+			// checking if DMA is enabled
+			if(__ADC_IS_DMA_ENABLED(hadc) != 0){
+
+				// starting DMA with ADC in Independent mode
+				if(HAL_ADC_Start_DMA(hadc, (uint32_t*)badc->idma.BufferADC, ADC_BUFF_SIZE) != HAL_OK){
+					return HAL_ERROR;
+				}
+			}
+	}else{
+
+			// checking if DMA is enabled
+			if(__ADC_IS_DMA_ENABLED(hadc) != 0){
+
+				// stopping ADC to reconfigure it for dual mode DMA
+				if(HAL_ADC_Stop(hadc) != HAL_OK){
+					return HAL_ERROR;
+				}
+			}
+
+	}
+
 
 	return HAL_OK; // returning positive status
 }
@@ -103,10 +128,25 @@ HAL_StatusTypeDef ADC_InitMultimode(ADC_HandleTypeDef* hadcMaster, ADC_BufferTyp
 		return HAL_ERROR;
 	}
 
-	// starting calibration
-	if(HAL_ADCEx_Calibration_Start(hadcMaster) != HAL_OK){
-		return HAL_ERROR;
-	}
+	// For F2 and F4 family Calibration function does not exist
+	#if !(defined(STM32F2_FAMILY) || defined(STM32F4_FAMILY))
+
+		#if defined(STM32F1_FAMILY)
+
+			// starting calibration for F1 Core
+			if(HAL_ADCEx_Calibration_Start(hadcMaster) != HAL_OK){
+				return HAL_ERROR;
+			}
+
+		#else
+
+			// starting calibration for F3 Core
+			if(HAL_ADCEx_Calibration_Start(hadcMaster, ADC_SINGLE_ENDED) != HAL_OK){
+				return HAL_ERROR;
+			}
+
+			#endif
+	#endif
 
 	// launching dual mode conversion
 	if(HAL_ADCEx_MultiModeStart_DMA(hadcMaster, badc->ddma.BufferMultiMode, ADC_BUFF_SIZE) != HAL_OK){
@@ -281,13 +321,16 @@ void               HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc){
   */
 HAL_StatusTypeDef  ADC_ConfigGetRanksOfChannels(ADC_HandleTypeDef* hadc, ADC_ChannelsTypeDef* cadc, ADC_BufferTypeDef* badc){
 
+	//Initialize variable that stores number of conversions
+	uint32_t numberOfConversions;
+
+
 	//Reading number of channels to be converted
-	uint32_t numberOfConversions = ((uint8_t)(hadc->Instance->SQR1 >> 20)) + 1;
+	numberOfConversions = ((hadc->Instance->SQR1 & ADC_SQR1_L_Msk) >> ADC_SQR1_L_Pos) + 1;
 
 
-	// Security check
-
-	if(numberOfConversions >= ADC_MAX_CHANNELS){
+	// Security check if number of ADC's number of turned on channels was correctly calculated
+	if(numberOfConversions > ADC_MAX_CHANNELS || numberOfConversions < 1){
 		return HAL_ERROR;
 	}
 
