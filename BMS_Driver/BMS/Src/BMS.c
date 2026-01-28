@@ -13,8 +13,14 @@
   *
   ******************************************************************************
   */
+
+/* Includes -----------------------------------------------------------------------------------  */
 #include "BMS.h"
 
+/* Variables ----------------------------------------------------------------------------------  */
+extern uint32_t lastTick;
+
+/* Functions' bodies --------------------------------------------------------------------------  */
 HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_HandleTypeDef* bhcan2, TIM_HandleTypeDef* htim){
 
 	// setting default status (normal) for BMS
@@ -47,9 +53,7 @@ HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_Han
 HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms, TIM_HandleTypeDef* htim, ADC_HandleTypeDef* hadc){
 
 	// blink green LED PWM
-	if(BMS_TIM_LED_Blink(bms->status, htim) != HAL_OK){
-		Error_Handler();
-	}
+
 
 
 	// Read ADC's channels
@@ -67,23 +71,10 @@ HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms, TIM_HandleTypeDef* htim, ADC
 	return HAL_OK;
 }
 
-HAL_StatusTypeDef BMS_Mode_Standby(BMS_TypeDef* bms, TIM_HandleTypeDef* htim){
-
-	// blink green LED with PWM
-	if(BMS_TIM_LED_Blink(bms->status, htim) != HAL_OK){
-		Error_Handler();
-	}
-
-	return HAL_OK;
-}
-
 HAL_StatusTypeDef BMS_Mode_Error(BMS_TypeDef* bms, TIM_HandleTypeDef* htim){
 
 
-	// turning on red LED with PWM
-	if(BMS_TIM_LED_Blink(bms->status, htim) != HAL_OK){
-		Error_Handler();
-	}
+
 
 	return HAL_OK;
 }
@@ -91,5 +82,35 @@ HAL_StatusTypeDef BMS_Mode_Error(BMS_TypeDef* bms, TIM_HandleTypeDef* htim){
 HAL_StatusTypeDef BMS_Log_Data(BMS_TypeDef* bms){
 
 	return HAL_OK;
+}
+
+void BMS_Mode_LEDBlink(BMS_TypeDef* bms){
+
+	// init variable which stores current tick
+	uint32_t now = HAL_GetTick();
+
+	// checking if correct ammout of time passed to Toggle LED state
+	if(now - lastTick >= 500){
+
+		switch(bms->status){
+
+			// toggling green state in case Normal mode is running
+			case BMS_NORMAL:
+
+				HAL_GPIO_TogglePin(GREEN_LD_GPIO_Port, GREEN_LD_Pin);
+				break;
+
+			// toggling red LED state in case Error mode is running
+			case BMS_Error:
+
+				HAL_GPIO_TogglePin(RED_LD_GPIO_Port, RED_LD_Pin);
+				break;
+		}
+
+		// updating tick
+		lastTick = now;
+
+	}
+
 }
 

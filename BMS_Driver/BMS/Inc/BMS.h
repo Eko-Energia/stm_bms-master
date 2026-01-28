@@ -30,19 +30,19 @@ extern "C" {
 
 /* Macros ----------------------------------------------------------------------------------  */
 
+/* Variables ----------------------------------------------------------------------------------  */
+extern uint32_t lastTick;
 
 /* Functions Prototypes --------------------------------------------------------------------  */
 HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_HandleTypeDef* bhcan2, TIM_HandleTypeDef* htim);
 
 HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms, TIM_HandleTypeDef* htim, ADC_HandleTypeDef* hadc);
 
-HAL_StatusTypeDef BMS_Mode_Standby(BMS_TypeDef* bms, TIM_HandleTypeDef* htim);
-
 HAL_StatusTypeDef BMS_Mode_Error(BMS_TypeDef* bms, TIM_HandleTypeDef* htim);
 
 HAL_StatusTypeDef BMS_Log_Data(BMS_TypeDef* bms);
 
-
+void BMS_Mode_LEDBlink(BMS_TypeDef* bms);
 
 
 #endif /* INC_BMS_H_ */

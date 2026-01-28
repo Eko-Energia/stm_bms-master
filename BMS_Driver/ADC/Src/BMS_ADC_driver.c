@@ -25,11 +25,10 @@ HAL_StatusTypeDef BMS_ADC_ReadValues(BMS_TypeDef* bms, ADC_HandleTypeDef* hadc){
 	}
 
 	// reading temperature | Needs tests when physical thermistor is connected
-	/*
 	if(BMS_ADC_Read_Temperature(bms, hadc) != HAL_OK){
 		return HAL_ERROR;
 	}
-	*/
+
 
 	// reading current
 	if(BMS_ADC_Read_Current(bms, hadc) != HAL_OK){
@@ -46,14 +45,13 @@ HAL_StatusTypeDef BMS_ADC_Read_Voltage(BMS_TypeDef* bms, ADC_HandleTypeDef* hadc
 
 	// reading channel's value
 	if(ADC_ReadChannel(hadc, &bms->cadc1, &bms->badc1, ADC_VOLTAGE_CH, &voltage_b) != HAL_OK){
-		Error_Handler();
+		return HAL_ERROR;
 	}
 
 	// calculating real value of voltage
-	voltage_f = ((3.619082048711e-10f * voltage_b * voltage_b * voltage_b)
-							+ (-2.900539105612e-06f * voltage_b * voltage_b)
-							+ (8.619777110039e-03f   * voltage_b)
-							+ (-7.178297753298f)) * 28.362637f;
+	if(ADC_GetValue(hadc, &bms->cadc1, &bms->badc1, VCC_SUPPLY_VOLTAGE, ADC_CHANNEL_12, &voltage_f) != HAL_OK){
+		return HAL_ERROR;
+	}
 
 
 	// scaling real value with factor and offset

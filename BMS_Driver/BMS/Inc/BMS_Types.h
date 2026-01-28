@@ -37,7 +37,6 @@
 /* Typedefs ----------------------------------------------------------------------------------  */
 typedef enum{
 	BMS_NORMAL = 0,
-	BMS_STANDBY,
 	BMS_Error
 }BMS_StatusTypeDef_e;
 
