@@ -13,7 +13,14 @@
   *
   ******************************************************************************
   */
+
+/* Includes --------------------------------------------------------------------------------  */
 #include "BMS.h"
+
+/* Variables -------------------------------------------------------------------------------  */
+extern uint32_t lastTick;
+
+/* Functions' bodies -----------------------------------------------------------------------  */
 
 HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_HandleTypeDef* bhcan2, ADC_HandleTypeDef* hadc, SPI_HandleTypeDef* hspi, UART_HandleTypeDef* huart){
 
@@ -68,6 +75,16 @@ HAL_StatusTypeDef BMS_Mode_Error(BMS_TypeDef* bms){
 
 
 	return HAL_OK;
+}
+
+void BMS_Mode_Change(BMS_TypeDef* bms, BMS_StatusTypeDef_e status){
+
+	// saving previous status
+	bms->prevStatus = bms->status;
+
+	// overwriting current BMS's status
+	bms->status = status;
+
 }
 
 HAL_StatusTypeDef BMS_Log_Data(BMS_TypeDef* bms){
@@ -153,4 +170,40 @@ HAL_StatusTypeDef BMS_Stop_Peripherals(BMS_TypeDef* bms){
 	return HAL_OK;
 }
 
-void 			  BMS_Mode_LEDBlink(BMS_TypeDef* bms);
+void BMS_Mode_LEDBlink(BMS_TypeDef* bms){
+
+	// Init of variable which stores current tick
+	uint32_t now = HAL_GetTick();
+
+	// checking if correct amount of time has passed to toggle LED state
+	if(now - lastTick >= 500){
+
+		switch(bms->status){
+
+			// executing blinking for normal BMS's state
+			case BMS_NORMAL:
+				// Toggling GREEN LED
+				HAL_GPIO_TogglePin(GREEN_LD_GPIO_Port, GREEN_LD_Pin);
+
+				// Turning off RED lED
+				HAL_GPIO_WritePin(RED_LD_GPIO_Port, RED_LD_Pin, GPIO_PIN_RESET);
+
+				break;
+
+			// executing blinking for error BMS's state
+			case BMS_Error:
+
+				// Toggling RED LED
+				HAL_GPIO_TogglePin(RED_LD_GPIO_Port, RED_LD_Pin);
+
+				// Turning off GREEN lED
+				HAL_GPIO_WritePin(GREEN_LD_GPIO_Port, GREEN_LD_Pin, GPIO_PIN_RESET);
+
+				break;
+		}
+
+		// updating tick
+		lastTick = now;
+	}
+
+}

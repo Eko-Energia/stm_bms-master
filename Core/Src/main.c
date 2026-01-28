@@ -50,6 +50,7 @@
 
 /* USER CODE BEGIN PV */
 BMS_TypeDef bms;
+uint32_t lastTick;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -116,23 +117,28 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
+  lastTick = HAL_GetTick();
   while (1)
   {
-	 switch(bms.status){
-		 case BMS_NORMAL:
+	  // Blinking LED according to current BMS's state
+	  BMS_Mode_LEDBlink(&bms);
 
-			 // Launching Normal mode for BMS
-			 if(BMS_Mode_Normal(&bms) != HAL_OK){
-				 Error_Handler();
+	  // state machine
+	  switch(bms.status){
+		  case BMS_NORMAL:
+
+			  // Launching Normal mode for BMS
+			  if(BMS_Mode_Normal(&bms) != HAL_OK){
+				  BMS_Mode_Change(&bms, BMS_Error);
 			 }
 
 			 break;
 		 case BMS_Error:
 
 			 // Launching Normal mode for BMS
-			 if(BMS_Mode_Error(&bms) != HAL_OK){
-				 Error_Handler();
-			 }
+			 BMS_Mode_Error(&bms);
+
 
 			 break;
 		 default:
