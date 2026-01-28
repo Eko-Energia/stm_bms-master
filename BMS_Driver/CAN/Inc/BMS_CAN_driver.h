@@ -27,7 +27,6 @@ extern "C" {
 
 /* Includes --------------------------------------------------------------------------------  */
 #include "BMS_Types.h"
-#include "stdlib.h"
 
 /* Variables ---------------------------------------------------------*/
 extern BMS_TypeDef bms;
@@ -72,11 +71,10 @@ extern BMS_TypeDef bms;
 #define BMS_THERM8_ID			138
 #define BMS_THERM9_ID			139
 
-/*
-	 ==============================================================================
-						   ##### CAN2 RX MACROS #####
-	 ==============================================================================
-*/
+
+/* Functions' prototypes ------------------------------------------------------------------  */
+
+HAL_StatusTypeDef BMS_CAN_Init(BMS_TypeDef* bms, CAN_HandleTypeDef* bhcan1, CAN_HandleTypeDef* bhcan2);
 
 
 

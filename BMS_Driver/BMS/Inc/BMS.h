@@ -49,6 +49,7 @@ HAL_StatusTypeDef BMS_Start_Peripherals(BMS_TypeDef* bms);
 
 HAL_StatusTypeDef BMS_Stop_Peripherals(BMS_TypeDef* bms);
 
+
 void 			  BMS_Mode_LEDBlink(BMS_TypeDef* bms);
 
 #ifdef __cplusplus

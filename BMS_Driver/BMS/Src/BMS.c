@@ -27,6 +27,7 @@ HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_Han
 	// assigning handle objects
 
 
+
 	// setting default status (normal) for BMS
 	bms->status     = BMS_NORMAL;
 	bms->prevStatus = BMS_NORMAL;
@@ -52,6 +53,7 @@ HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms){
 			return HAL_ERROR;
 		}
 
+		bms->prevStatus = BMS_NORMAL;
 	}
 
 	// Read ADC's channels
@@ -79,6 +81,7 @@ HAL_StatusTypeDef BMS_Mode_Error(BMS_TypeDef* bms){
 
 void BMS_Mode_Change(BMS_TypeDef* bms, BMS_StatusTypeDef_e status){
 
+
 	// saving previous status
 	bms->prevStatus = bms->status;
 
@@ -92,6 +95,7 @@ HAL_StatusTypeDef BMS_Log_Data(BMS_TypeDef* bms){
 
 	return HAL_OK;
 }
+
 
 HAL_StatusTypeDef BMS_Start_Peripherals(BMS_TypeDef* bms){
 
@@ -172,10 +176,12 @@ HAL_StatusTypeDef BMS_Stop_Peripherals(BMS_TypeDef* bms){
 
 void BMS_Mode_LEDBlink(BMS_TypeDef* bms){
 
-	// Init of variable which stores current tick
+
+	// init variable which stores current tick
 	uint32_t now = HAL_GetTick();
 
-	// checking if correct amount of time has passed to toggle LED state
+	// checking if correct ammout of time passed to Toggle LED state
+
 	if(now - lastTick >= 500){
 
 		switch(bms->status){
@@ -204,6 +210,7 @@ void BMS_Mode_LEDBlink(BMS_TypeDef* bms){
 
 		// updating tick
 		lastTick = now;
+
 	}
 
 }

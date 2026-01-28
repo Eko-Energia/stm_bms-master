@@ -83,7 +83,6 @@ typedef struct{
 
 	CAN_BMSTypeDef 		bmsCAN;														// BMS's CAN custom typedef object
 	ADC_BMSTypeDef 		bmsADC;														// BMS's ADC custom typedef object
-
 }BMS_TypeDef;
 
 

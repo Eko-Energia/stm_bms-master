@@ -77,6 +77,10 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
+<<<<<<< HEAD
+=======
+						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="BMS_Driver/ADC/Src"/>
+>>>>>>> 339ea2a641216d164cf81a111fd372131b63bbf3
 						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="BMS_Driver/BMS/Src"/>
 						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="EKO_Drivers"/>
 						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="BMS_Driver/ADC/Src"/>

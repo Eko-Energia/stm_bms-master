@@ -27,3 +27,4 @@ Release/
 *.cyclo
 .settings/
 *.xml
+*.mk
