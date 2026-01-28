@@ -32,11 +32,9 @@ extern "C" {
 
 
 /* Functions Prototypes --------------------------------------------------------------------  */
-HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_HandleTypeDef* bhcan2, TIM_HandleTypeDef* htim, ADC_HandleTypeDef* hadc, SPI_HandleTypeDef* hspi, UART_HandleTypeDef* huart);
+HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_HandleTypeDef* bhcan2, ADC_HandleTypeDef* hadc, SPI_HandleTypeDef* hspi, UART_HandleTypeDef* huart);
 
 HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms);
-
-HAL_StatusTypeDef BMS_Mode_Standby(BMS_TypeDef* bms);
 
 HAL_StatusTypeDef BMS_Mode_Error(BMS_TypeDef* bms);
 
@@ -46,5 +44,10 @@ HAL_StatusTypeDef BMS_Start_Peripherals(BMS_TypeDef* bms);
 
 HAL_StatusTypeDef BMS_Stop_Peripherals(BMS_TypeDef* bms);
 
+void 			  BMS_Mode_LEDBlink(BMS_TypeDef* bms);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* INC_BMS_H_ */

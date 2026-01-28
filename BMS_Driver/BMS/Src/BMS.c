@@ -15,7 +15,7 @@
   */
 #include "BMS.h"
 
-HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_HandleTypeDef* bhcan2, TIM_HandleTypeDef* htim, ADC_HandleTypeDef* hadc, SPI_HandleTypeDef* hspi, UART_HandleTypeDef* huart){
+HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_HandleTypeDef* bhcan2, ADC_HandleTypeDef* hadc, SPI_HandleTypeDef* hspi, UART_HandleTypeDef* huart){
 
 	// assigning handle objects
 
@@ -31,20 +31,6 @@ HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_Han
 	for(int i = 0; i< 7; ++i){ memset(bms->bmsCAN.CAN2_temperatureCells[i], 0, sizeof(bms->bmsCAN.CAN2_temperatureCells[i][0]));}
 
 
-	// Starting timers on channels 4 for handling blinking green LEDs
-	if(HAL_TIM_PWM_Start(&bms->htim, TIM_GREEN_LD) != HAL_OK){
-		return HAL_ERROR;
-    }
-
-
-	// Starting timer on channels 3 for handling blinking red LEDs
-	if(HAL_TIM_PWM_Start(&bms->htim, TIM_RED_LD) != HAL_OK){
-		return HAL_ERROR;
-  	}
-
-	if(BMS_Start_Peripherals(bms) != HAL_OK){
-		return HAL_ERROR;
-	}
 
 
 	return HAL_OK;
@@ -71,13 +57,6 @@ HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms){
 
 
 	// Send Data via nrf905
-
-
-	return HAL_OK;
-}
-
-HAL_StatusTypeDef BMS_Mode_Standby(BMS_TypeDef* bms){
-
 
 
 	return HAL_OK;
@@ -125,13 +104,6 @@ HAL_StatusTypeDef BMS_Start_Peripherals(BMS_TypeDef* bms){
 		return HAL_ERROR;
 	}
 
-	// Checking if CAN1 is in sleep mode, if yes, then wake up CAN1
-	if(HAL_CAN_IsSleepActive(&bms->bmsCAN.bhcan1)){
-		if(HAL_CAN_WakeUp(&bms->bmsCAN.bhcan1) != HAL_OK){
-			return HAL_ERROR;
-		}
-	}
-
 	// Checking if CAN2 is in sleep mode, if yes, then wake up CAN2
 	if(HAL_CAN_IsSleepActive(&bms->bmsCAN.bhcan2)){
 		if(HAL_CAN_WakeUp(&bms->bmsCAN.bhcan2) != HAL_OK){
@@ -166,10 +138,6 @@ HAL_StatusTypeDef BMS_Stop_Peripherals(BMS_TypeDef* bms){
 	 ==============================================================================
 */
 
-	// Stopping CAN1 peripheral workflow for BMS in Standby or Error Mode
-	if(HAL_CAN_Stop(&bms->bmsCAN.bhcan1) != HAL_OK){
-		return HAL_ERROR;
-	}
 
 	// Stopping CAN2 peripheral workflow for BMS in Standby or Error Mode
 	if(HAL_CAN_Stop(&bms->bmsCAN.bhcan2) != HAL_OK){
@@ -184,3 +152,5 @@ HAL_StatusTypeDef BMS_Stop_Peripherals(BMS_TypeDef* bms){
 
 	return HAL_OK;
 }
+
+void 			  BMS_Mode_LEDBlink(BMS_TypeDef* bms);

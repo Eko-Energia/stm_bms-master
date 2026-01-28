@@ -27,6 +27,7 @@ extern "C" {
 
 /* Includes --------------------------------------------------------------------------------  */
 #include "BMS_Types.h"
+#include "stdlib.h"
 
 /* Variables ---------------------------------------------------------*/
 extern BMS_TypeDef bms;
@@ -89,7 +90,7 @@ HAL_StatusTypeDef BMS_CAN_Add_PeripFrames(BMS_TypeDef* bms);
 
 void 			  BMS_CAN_Get_ADC_Data(uint8_t *data);
 
-void 			  BMS_CAN_Get_Node_Data(uint8_t *data);;
+void 			  BMS_CAN_Get_Node_Data(uint8_t *data);
 
 void 			  BMS_CAN_PackCAN2Temps(uint8_t* data, uint8_t thermId);
 
@@ -115,8 +116,12 @@ uint8_t 		  BMS_CAN_GetMSB(uint16_t value);
 
 uint8_t 		  BMS_CAN_GetLSB(uint16_t value);
 
-HAL_StatusTypeDef BMS_CAN_ScallingParams(BMS_TypeDef* bms, uint8_t channel, float value_f);
+HAL_StatusTypeDef BMS_CAN_ScallingParams(BMS_TypeDef* bms, uint8_t channel, float* value_f);
 
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif	/* INC_BMS_CAN_DRIVER_H_ */

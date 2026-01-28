@@ -25,11 +25,11 @@ HAL_StatusTypeDef BMS_ADC_ReadValues(BMS_TypeDef* bms){
 	}
 
 	// reading temperature | Needs tests when physical thermistor is connected
-	/*
+
 	if(BMS_ADC_Read_Temperature(bms) != HAL_OK){
 		return HAL_ERROR;
 	}
-	*/
+
 
 	// reading current
 	if(BMS_ADC_Read_Current(bms) != HAL_OK){
@@ -57,7 +57,7 @@ HAL_StatusTypeDef BMS_ADC_Read_Voltage(BMS_TypeDef* bms){
 
 
 	// scaling real value with factor and offset
-	if(BMS_CAN_ScallingParams(bms, ADC_VOLTAGE_CH, voltage_f) != HAL_OK){
+	if(BMS_CAN_ScallingParams(bms, ADC_VOLTAGE_CH, &voltage_f) != HAL_OK){
 		return HAL_ERROR;
 	}
 

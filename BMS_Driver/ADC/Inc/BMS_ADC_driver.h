@@ -45,4 +45,8 @@ float BMS_ADC_NTC_calibrateTemperature(float measured);
 float BMS_ADC_NTC_GetTemperature(float Rt);
 
 
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* INC_BMS_ADC_DRIVER_H_ */

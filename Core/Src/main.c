@@ -22,7 +22,6 @@
 #include "can.h"
 #include "dma.h"
 #include "spi.h"
-#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -101,7 +100,6 @@ int main(void)
   MX_SPI1_Init();
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
-  MX_TIM4_Init();
 
   /* Initialize interrupts */
   MX_NVIC_Init();
@@ -110,7 +108,7 @@ int main(void)
 
   /*BMS---------------------------------------------------------*/
   // Init of BMS to launch workflow
-  if(BMS_Init(&bms, &hcan1, &hcan2, &htim4, &hadc1, &hspi1, &huart1) != HAL_OK){
+  if(BMS_Init(&bms, &hcan1, &hcan2, &hadc1, &hspi1, &huart1) != HAL_OK){
 	  Error_Handler();
   }
 
@@ -129,14 +127,6 @@ int main(void)
 			 }
 
 			 break;
-		 case BMS_STANDBY:
-
-			 // Launching Normal mode for BMS
-			 if(BMS_Mode_Standby(&bms) != HAL_OK){
-				 Error_Handler();
-			 }
-
-			 break;
 		 case BMS_Error:
 
 			 // Launching Normal mode for BMS
@@ -149,11 +139,6 @@ int main(void)
 			 break;
 
 	 }
-
-	 // blink LED in correct, for current BMS's status, way
-	if(BMS_TIM_LED_Blink(&bms) != HAL_OK){
-		Error_Handler();
-	}
 
     /* USER CODE END WHILE */
 

@@ -23,28 +23,19 @@ extern BMS_TypeDef bms;
 /* Functions' bodies -------------------------------------------------*/
 HAL_StatusTypeDef BMS_CAN_Init(BMS_TypeDef* bms){
 
-	// Init of CAN1 and CAN2 to start communication via these buses
-	CAN_Init(&bms->bmsCAN.bhcan1);
+	// Init of CAN2 to start communication via these buses
 	CAN_Init(&bms->bmsCAN.bhcan2);
+
+	// Starting CAN2
+	if(HAL_CAN_Start(&bms->bmsCAN.bhcan2) != HAL_OK){
+		return HAL_ERROR;
+	}
 
 	// launching interrupts for CAN2
 	if(HAL_CAN_ActivateNotification(&bms->bmsCAN.bhcan2, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK){
 		return HAL_ERROR;
 	}
 
-	/*
-	 * adding all CAN frames, which are co-related to BMS
-	 */
-
-	// adding node's frames
-	if(BMS_CAN_Add_Message(bms, BMS_NODE_ID, BMS_NODE_DLC, BMS_NODE_PERIOD) != HAL_OK){
-		return HAL_ERROR;
-	}
-
-	// Adding frames co-related to peripherals data
-	if(BMS_CAN_Add_PeripFrames(bms) != HAL_OK){
-		return HAL_ERROR;
-	}
 
 	return HAL_OK;
 }
@@ -145,10 +136,6 @@ void BMS_CAN_Get_ADC_Data(uint8_t *data){
 	data[5] = BMS_CAN_GetMSB(bms.bmsADC.ADC_voltTempCurr[1]);  // MSB
 }
 
-void BMS_CAN_Get_Node_Data(uint8_t *data){
-
-
-}
 
 void BMS_CAN_PackCAN2Temps(uint8_t* data, uint8_t thermId){
 	for(int i = 0; i < 7; ++i){
@@ -177,23 +164,23 @@ uint8_t BMS_CAN_GetLSB(uint16_t value){
 
 
 
-HAL_StatusTypeDef BMS_CAN_ScallingParams(BMS_TypeDef* bms, uint8_t channel, float value_f){
+HAL_StatusTypeDef BMS_CAN_ScallingParams(BMS_TypeDef* bms, uint8_t channel, float* value_f){
 
 	switch(channel){
 		case ADC_VOLTAGE_CH:
 
 			// calculating binary type of read voltage with factor and offset
-			bms->bmsADC.ADC_voltTempCurr[0] = (value_f - VOLTAGE_OFFSET) * VOLTAGE_GAIN;
+			bms->bmsADC.ADC_voltTempCurr[0] = (*value_f - VOLTAGE_OFFSET) * VOLTAGE_GAIN;
 			break;
 		case ADC_CURRENT_CH:
 
 			// calculating binary type of read voltage with factor and offset
-			bms->bmsADC.ADC_voltTempCurr[2] = (value_f - CURRENT_OFFSET) * CURRENT_GAIN;
+			bms->bmsADC.ADC_voltTempCurr[2] = (*value_f - CURRENT_OFFSET) * CURRENT_GAIN;
 			break;
 		case ADC_TEMP_CH:
 
 			// calculating binary type of read voltage with factor and offset
-			bms->bmsADC.ADC_voltTempCurr[1] = (value_f - TEMPERATURE_OFFSET) * TEMPERATURE_GAIN;
+			bms->bmsADC.ADC_voltTempCurr[1] = (*value_f - TEMPERATURE_OFFSET) * TEMPERATURE_GAIN;
 			break;
 		default:
 
@@ -208,18 +195,21 @@ HAL_StatusTypeDef BMS_CAN_ScallingParams(BMS_TypeDef* bms, uint8_t channel, floa
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan){
 	if(hcan->Instance == CAN2){
 
-		CAN_RxHeaderTypeDef RxHeader;	// Init header for Rx frame
-		uint8_t rxData;				// Init data storage for Rx frame's data
+		static CAN_RxHeaderTypeDef RxHeader;	// Init header for Rx frame
+		static uint8_t* rxData;				// Init data storage for Rx frame's data
 
-		if(HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &RxHeader, &rxData) == HAL_OK){
+		if(HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &RxHeader, rxData) == HAL_OK){
 
 			// calculating received Number of PCB which sent frame and thermistor index, whose temperature has been sent.
 			int pcbIndex = (RxHeader.StdId - 200) / 10;						// extracting number from Id, PCB index stand as a second number in frame's ID
 			uint8_t thermIndex = RxHeader.StdId - 200 - pcbIndex * 10;		// extracting number from Id, thermistor index stand as a third number in frame's ID
 
 			// overwriting container for cells' temperatures with new value. indexes are decreamented cause indexes in arrays starts from index 0, but calculated numbers start from 1
-			bms.bmsCAN.CAN2_temperatureCells[pcbIndex - 1][thermIndex - 1] = rxData;
+			bms.bmsCAN.CAN2_temperatureCells[pcbIndex - 1][thermIndex - 1] = rxData[0];
 
 		}
+
+		// deallocating memory
+		free(rxData);
 	}
 }

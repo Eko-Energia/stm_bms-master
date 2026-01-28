@@ -37,7 +37,6 @@
 /* Typedefs ----------------------------------------------------------------------------------  */
 typedef enum{
 	BMS_NORMAL = 0,
-	BMS_STANDBY,
 	BMS_Error
 }BMS_StatusTypeDef_e;
 
@@ -79,8 +78,6 @@ typedef struct{
 	BMS_StatusTypeDef_e  status;													// current BMS status
 	BMS_StatusTypeDef_e  prevStatus;												// previous BMS status in case status change occurred
 
-
-	TIM_HandleTypeDef   htim;														// TIM  handle used in BMS's firmware | LEDs blinking
 	UART_HandleTypeDef  huart1;														// UART handle used in BMS's firmware | logging   data via UART1
 	SPI_HandleTypeDef   hspi1;														// SPI  handle used in BMS's firmware | sending   data via NRF905
 
@@ -91,10 +88,6 @@ typedef struct{
 
 
 /* Macros ------------------------------------------------------------------------------------  */
-
-//TIM
-#define TIM_GREEN_LD		TIM_CHANNEL_4
-#define TIM_RED_LD   		TIM_CHANNEL_3
 
 // ADC
 #define ADC_VOLTAGE_CH 12
