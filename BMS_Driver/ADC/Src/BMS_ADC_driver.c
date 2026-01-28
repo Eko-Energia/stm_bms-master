@@ -49,7 +49,7 @@ HAL_StatusTypeDef BMS_ADC_Read_Voltage(BMS_TypeDef* bms){
 	}
 
 	// calculating real value of voltage
-	if(ADC_GetValue(hadc, &bms->cadc1, &bms->badc1, VCC_SUPPLY_VOLTAGE, ADC_CHANNEL_12, &voltage_f) != HAL_OK){
+	if(ADC_GetValue(&bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, VCC_SUPPLY_VOLTAGE, ADC_CHANNEL_12, &voltage_f) != HAL_OK){
 		return HAL_ERROR;
 	}
 

@@ -74,12 +74,6 @@ extern BMS_TypeDef bms;
 
 /* Functions' prototypes ------------------------------------------------------------------  */
 
-HAL_StatusTypeDef BMS_CAN_Init(BMS_TypeDef* bms, CAN_HandleTypeDef* bhcan1, CAN_HandleTypeDef* bhcan2);
-
-
-
-/* Functions' prototypes ------------------------------------------------------------------  */
-
 HAL_StatusTypeDef BMS_CAN_Init(BMS_TypeDef* bms);
 
 HAL_StatusTypeDef BMS_CAN_Add_Message(BMS_TypeDef* bms, uint32_t Id, uint8_t DLC, uint32_t period);

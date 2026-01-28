@@ -21,7 +21,7 @@
 #include "adc.h"
 
 /* USER CODE BEGIN 0 */
-extern BMS_TypeDef bms;
+
 /* USER CODE END 0 */
 
 ADC_HandleTypeDef hadc1;

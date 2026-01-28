@@ -79,7 +79,6 @@ void Error_Handler(void);
 #define D0_GPIO_Port GPIOB
 #define BOOT1_Pin GPIO_PIN_2
 #define BOOT1_GPIO_Port GPIOB
-#define BOOT1_EXTI_IRQn EXTI2_IRQn
 #define TX_EN_Pin GPIO_PIN_14
 #define TX_EN_GPIO_Port GPIOB
 #define TRX_CE_Pin GPIO_PIN_15

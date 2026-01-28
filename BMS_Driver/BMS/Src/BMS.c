@@ -25,8 +25,11 @@ extern uint32_t lastTick;
 HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_HandleTypeDef* bhcan2, ADC_HandleTypeDef* hadc, SPI_HandleTypeDef* hspi, UART_HandleTypeDef* huart){
 
 	// assigning handle objects
-
-
+	bms->bmsADC.hadc   = *hadc;
+	bms->bmsCAN.bhcan1 = *bhcan1;
+	bms->bmsCAN.bhcan2 = *bhcan2;
+	bms->hspi1 		   = *hspi;
+	bms->huart1        = *huart;
 
 	// setting default status (normal) for BMS
 	bms->status     = BMS_NORMAL;
