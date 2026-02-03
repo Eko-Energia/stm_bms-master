@@ -29,7 +29,7 @@ extern "C" {
 #include "BMS_Types.h"
 
 /* Variables ---------------------------------------------------------*/
-extern BMS_TypeDef bms;
+
 
 /* Macros ----------------------------------------------------------------------------------  */
 /*
@@ -76,9 +76,9 @@ extern BMS_TypeDef bms;
 
 HAL_StatusTypeDef BMS_CAN_Init(BMS_TypeDef* bms);
 
-HAL_StatusTypeDef BMS_CAN_Add_Message(BMS_TypeDef* bms, uint32_t Id, uint8_t DLC, uint32_t period);
+HAL_StatusTypeDef BMS_CAN_AddMessage(BMS_TypeDef* bms, uint32_t Id, uint8_t DLC, uint32_t period);
 
-HAL_StatusTypeDef BMS_CAN_Add_PeripFrames(BMS_TypeDef* bms);
+HAL_StatusTypeDef BMS_CAN_AddPeripheralFrames(BMS_TypeDef* bms);
 
 void 			  BMS_CAN_Get_ADC_Data(uint8_t *data);
 

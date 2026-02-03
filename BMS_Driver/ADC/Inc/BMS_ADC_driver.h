@@ -32,6 +32,7 @@ extern "C" {
 
 
 /* Functions' prototypes ---------------------------------------------------------------------  */
+HAL_StatusTypeDef BMS_ADC_Init(BMS_TypeDef* bms);
 
 HAL_StatusTypeDef BMS_ADC_ReadValues(BMS_TypeDef* bms);
 

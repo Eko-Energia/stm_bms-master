@@ -20,7 +20,7 @@ HAL_StatusTypeDef BMS_ADC_Init(BMS_TypeDef* bms){
 
 
 	// Init ADC
-	if(ADC_Init(&bms->bmsADC.hadc, &bms->bmsADC.badc1, &bms->bmsADC.cadc1) != HAL_OK){
+	if(ADC_Init(bms->bmsADC.hadc, &bms->bmsADC.badc1, &bms->bmsADC.cadc1) != HAL_OK){
 		return HAL_ERROR;
 	}
 
@@ -55,12 +55,12 @@ HAL_StatusTypeDef BMS_ADC_Read_Voltage(BMS_TypeDef* bms){
 	float voltage_f = 0.0f; // real type of voltage
 
 	// reading channel's value
-	if(ADC_ReadChannel(&bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, ADC_VOLTAGE_CH, &voltage_b) != HAL_OK){
-		Error_Handler();
+	if(ADC_ReadChannel(bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, ADC_VOLTAGE_CH, &voltage_b) != HAL_OK){
+		return HAL_ERROR;
 	}
 
 	// calculating real value of voltage
-	if(ADC_GetValue(&bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, VCC_SUPPLY_VOLTAGE, ADC_CHANNEL_12, &voltage_f) != HAL_OK){
+	if(ADC_GetValue(bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, VCC_SUPPLY_VOLTAGE, ADC_CHANNEL_12, &voltage_f) != HAL_OK){
 		return HAL_ERROR;
 	}
 
@@ -83,12 +83,12 @@ HAL_StatusTypeDef BMS_ADC_Read_Temperature(BMS_TypeDef* bms){
 
 
 	// reading value
-	if(ADC_ReadChannel(&bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, ADC_TEMP_CH, &voltage_b) != HAL_OK){
+	if(ADC_ReadChannel(bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, ADC_TEMP_CH, &voltage_b) != HAL_OK){
 		return HAL_ERROR;
 	}
 
 	// calculating voltage before voltage divider
-	if(ADC_GetValue(&bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, VCC_SUPPLY_VOLTAGE, ADC_TEMP_CH, &voltage_f) != HAL_OK){
+	if(ADC_GetValue(bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, VCC_SUPPLY_VOLTAGE, ADC_TEMP_CH, &voltage_f) != HAL_OK){
 		return HAL_ERROR;
 	}
 
@@ -117,7 +117,7 @@ HAL_StatusTypeDef BMS_ADC_Read_Current(BMS_TypeDef* bms){
 	float current_f    = 0.0f;  // real type of current
 
 	// reading channel's value
-	if(ADC_ReadChannel(&bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, ADC_CURRENT_CH, &current_b) != HAL_OK){
+	if(ADC_ReadChannel(bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, ADC_CURRENT_CH, &current_b) != HAL_OK){
 		return HAL_ERROR;
 	}
 

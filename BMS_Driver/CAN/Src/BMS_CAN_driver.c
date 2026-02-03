@@ -23,25 +23,26 @@ extern BMS_TypeDef bms;
 /* Functions' bodies -------------------------------------------------*/
 HAL_StatusTypeDef BMS_CAN_Init(BMS_TypeDef* bms){
 
-	// Init of CAN2 to start communication via these buses
-	CAN_Init(&bms->bmsCAN.bhcan2);
-
+	// Adding peripherals frames | co-related to ADC and CAN2
+	if(BMS_CAN_AddPeripheralFrames(bms) != HAL_OK){
+		return HAL_ERROR;
+	}
 
 	// Launching CAN1
-	CAN_Init(&bms->bmsCAN.bhcan2);
+	CAN_Init(bms->bmsCAN.bhcan1);
 
 	// Starting CAN2
-	CAN_Init(&bms->bmsCAN.bhcan2);
+	CAN_Init(bms->bmsCAN.bhcan2);
 
-	// launching interrupts for CAN2
-	if(HAL_CAN_ActivateNotification(&bms->bmsCAN.bhcan2, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK){
+	// enabling interrupts for CAN2
+	if(HAL_CAN_ActivateNotification(bms->bmsCAN.bhcan2, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK){
 		return HAL_ERROR;
 	}
 
 	return HAL_OK;
 }
 
-HAL_StatusTypeDef BMS_CAN_Add_Message(BMS_TypeDef* bms, uint32_t Id, uint8_t DLC, uint32_t period){
+HAL_StatusTypeDef BMS_CAN_AddMessage(BMS_TypeDef* bms, uint32_t Id, uint8_t DLC, uint32_t period){
 
 	// initialize CAN message
 	CAN_ScheduledMsg msg;
@@ -56,43 +57,40 @@ HAL_StatusTypeDef BMS_CAN_Add_Message(BMS_TypeDef* bms, uint32_t Id, uint8_t DLC
 
 	// assigning correct return of data function to correct msg
 	switch(Id){
-	case BMS_NODE_ID:
-		msg.GetData = BMS_CAN_Get_Node_Data;
-		break;
-	case BMS_VOLTCURTEMP_ID:
-		msg.GetData = BMS_CAN_Get_ADC_Data;
-		break;
-	case BMS_THERM1_ID:
-		msg.GetData = BMS_CAN_Get_CAN2_Data_Therm1;
-		break;
-	case BMS_THERM2_ID:
-		msg.GetData = BMS_CAN_Get_CAN2_Data_Therm2;
+		case BMS_VOLTCURTEMP_ID:
+			msg.GetData = BMS_CAN_Get_ADC_Data;
 			break;
-	case BMS_THERM3_ID:
-		msg.GetData = BMS_CAN_Get_CAN2_Data_Therm3;
+		case BMS_THERM1_ID:
+			msg.GetData = BMS_CAN_Get_CAN2_Data_Therm1;
 			break;
-	case BMS_THERM4_ID:
-		msg.GetData = BMS_CAN_Get_CAN2_Data_Therm4;
-			break;
-	case BMS_THERM5_ID:
-		msg.GetData = BMS_CAN_Get_CAN2_Data_Therm5;
-			break;
-	case BMS_THERM6_ID:
-		msg.GetData = BMS_CAN_Get_CAN2_Data_Therm6;
-			break;
-	case BMS_THERM7_ID:
-		msg.GetData = BMS_CAN_Get_CAN2_Data_Therm7;
-			break;
-	case BMS_THERM8_ID:
-		msg.GetData = BMS_CAN_Get_CAN2_Data_Therm8;
-			break;
-	case BMS_THERM9_ID:
-		msg.GetData = BMS_CAN_Get_CAN2_Data_Therm9;
-			break;
-	default:
+		case BMS_THERM2_ID:
+			msg.GetData = BMS_CAN_Get_CAN2_Data_Therm2;
+				break;
+		case BMS_THERM3_ID:
+			msg.GetData = BMS_CAN_Get_CAN2_Data_Therm3;
+				break;
+		case BMS_THERM4_ID:
+			msg.GetData = BMS_CAN_Get_CAN2_Data_Therm4;
+				break;
+		case BMS_THERM5_ID:
+			msg.GetData = BMS_CAN_Get_CAN2_Data_Therm5;
+				break;
+		case BMS_THERM6_ID:
+			msg.GetData = BMS_CAN_Get_CAN2_Data_Therm6;
+				break;
+		case BMS_THERM7_ID:
+			msg.GetData = BMS_CAN_Get_CAN2_Data_Therm7;
+				break;
+		case BMS_THERM8_ID:
+			msg.GetData = BMS_CAN_Get_CAN2_Data_Therm8;
+				break;
+		case BMS_THERM9_ID:
+			msg.GetData = BMS_CAN_Get_CAN2_Data_Therm9;
+				break;
+		default:
 
-		// return error status in case wrong Id has been given
-		return HAL_ERROR;
+			// return error status in case wrong Id has been given
+			return HAL_ERROR;
 		break;
 	}
 
@@ -105,16 +103,16 @@ HAL_StatusTypeDef BMS_CAN_Add_Message(BMS_TypeDef* bms, uint32_t Id, uint8_t DLC
 	return HAL_OK;
 }
 
-HAL_StatusTypeDef BMS_CAN_Add_PeripFrames(BMS_TypeDef* bms){
+HAL_StatusTypeDef BMS_CAN_AddPeripheralFrames(BMS_TypeDef* bms){
 
 	// adding frames with voltage, temperature and current
-	if(BMS_CAN_Add_Message(bms, BMS_VOLTCURTEMP_ID, BMS_VOLTCURTEMP_DLC, BMS_VOLTCURTEMP_PERIOD) != HAL_OK){
+	if(BMS_CAN_AddMessage(bms, BMS_VOLTCURTEMP_ID, BMS_VOLTCURTEMP_DLC, BMS_VOLTCURTEMP_PERIOD) != HAL_OK){
 		return HAL_ERROR;
 	}
 
 	// Adding frames co-related to PCBs' cells' temperatures of thermistors
 	for(int i = 0; i < 9; ++i){
-		if(BMS_CAN_Add_Message(bms, (BMS_THERM1_ID + i), BMS_THERMx_DLC, BMS_THERMx_PERIOD) != HAL_OK){
+		if(BMS_CAN_AddMessage(bms, (BMS_THERM1_ID + i), BMS_THERMx_DLC, BMS_THERMx_PERIOD) != HAL_OK){
 			return HAL_ERROR;
 		}
 	}
@@ -209,8 +207,5 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan){
 			bms.bmsCAN.CAN2_temperatureCells[pcbIndex - 1][thermIndex - 1] = rxData[0];
 
 		}
-
-		// deallocating memory
-		free(rxData);
 	}
 }
