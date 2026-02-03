@@ -109,13 +109,7 @@ HAL_StatusTypeDef BMS_ADC_Read_Current(BMS_TypeDef* bms, ADC_HandleTypeDef* hadc
 		return HAL_ERROR;
 	}
 
-	/*
-	 // Delete comments while conducting tests
-	 if(ADC_G
-
-	 */
-
-
+	// Reserved for ADC current measurement tests (no active test code here).
 	// calculating real value of current
 	current_f = ((float)current_b - 2108.0f)/4.0f;
 
