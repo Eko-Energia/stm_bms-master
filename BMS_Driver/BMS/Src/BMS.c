@@ -41,7 +41,15 @@ HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_Han
 	// reseting array which stores cells' voltages, whose values are provided by CAN2
 	for(int i = 0; i< 7; ++i){ memset(bms->bmsCAN.CAN2_temperatureCells[i], 0, sizeof(bms->bmsCAN.CAN2_temperatureCells[i][0]));}
 
+	// Launching CAN1 and CAN2
+	if(BMS_CAN_Init(bms) != HAL_OK){
+		return HAL_ERROR;
+	}
 
+	// Init ADC
+	if(BMS_ADC_Init(bms) != HAL_OK){
+		return HAL_ERROR;
+	}
 
 
 	return HAL_OK;
@@ -112,10 +120,6 @@ HAL_StatusTypeDef BMS_Start_Peripherals(BMS_TypeDef* bms){
 		return HAL_ERROR;
 	}
 
-	// Launching ADC for BMS
-	if(ADC_Init(&bms->bmsADC.hadc, &bms->bmsADC.badc1, &bms->bmsADC.cadc1) != HAL_OK){
-		return HAL_OK;
-	}
 
 /*
 	 ==============================================================================
@@ -123,10 +127,6 @@ HAL_StatusTypeDef BMS_Start_Peripherals(BMS_TypeDef* bms){
 	 ==============================================================================
 */
 
-	// Launching CAN for BMS
-	if(BMS_CAN_Init(bms) != HAL_OK){
-		return HAL_ERROR;
-	}
 
 	// Checking if CAN2 is in sleep mode, if yes, then wake up CAN2
 	if(HAL_CAN_IsSleepActive(&bms->bmsCAN.bhcan2)){
@@ -134,6 +134,8 @@ HAL_StatusTypeDef BMS_Start_Peripherals(BMS_TypeDef* bms){
 			return HAL_ERROR;
 		}
 	}
+
+
 
 	return HAL_OK;
 }

@@ -16,6 +16,17 @@
 
 #include "BMS_ADC_driver.h"
 
+HAL_StatusTypeDef BMS_ADC_Init(BMS_TypeDef* bms){
+
+
+	// Init ADC
+	if(ADC_Init(&bms->bmsADC.hadc, &bms->bmsADC.badc1, &bms->bmsADC.cadc1) != HAL_OK){
+		return HAL_ERROR;
+	}
+
+	return HAL_OK;
+}
+
 
 HAL_StatusTypeDef BMS_ADC_ReadValues(BMS_TypeDef* bms){
 

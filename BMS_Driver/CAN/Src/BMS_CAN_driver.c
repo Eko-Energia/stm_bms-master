@@ -26,16 +26,17 @@ HAL_StatusTypeDef BMS_CAN_Init(BMS_TypeDef* bms){
 	// Init of CAN2 to start communication via these buses
 	CAN_Init(&bms->bmsCAN.bhcan2);
 
+
+	// Launching CAN1
+	CAN_Init(&bms->bmsCAN.bhcan2);
+
 	// Starting CAN2
-	if(HAL_CAN_Start(&bms->bmsCAN.bhcan2) != HAL_OK){
-		return HAL_ERROR;
-	}
+	CAN_Init(&bms->bmsCAN.bhcan2);
 
 	// launching interrupts for CAN2
 	if(HAL_CAN_ActivateNotification(&bms->bmsCAN.bhcan2, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK){
 		return HAL_ERROR;
 	}
-
 
 	return HAL_OK;
 }
@@ -125,15 +126,15 @@ void BMS_CAN_Get_ADC_Data(uint8_t *data){
 
 	// setting data with ADC's measured voltage
 	data[0] = BMS_CAN_GetLSB(bms.bmsADC.ADC_voltTempCurr[0]);	// LSB
-	data[1] = BMS_CAN_GetMSB(bms.bmsADC.ADC_voltTempCurr[0]);  // MSB
+	data[1] = BMS_CAN_GetMSB(bms.bmsADC.ADC_voltTempCurr[0]);   // MSB
 
 	// setting data with ADC's measured current
 	data[2] = BMS_CAN_GetLSB(bms.bmsADC.ADC_voltTempCurr[2]);	// LSB
-	data[3] = BMS_CAN_GetMSB(bms.bmsADC.ADC_voltTempCurr[2]);  // MSB
+	data[3] = BMS_CAN_GetMSB(bms.bmsADC.ADC_voltTempCurr[2]);   // MSB
 
 	// setting data with ADC's measured temperature
 	data[4] = BMS_CAN_GetLSB(bms.bmsADC.ADC_voltTempCurr[1]);	// LSB
-	data[5] = BMS_CAN_GetMSB(bms.bmsADC.ADC_voltTempCurr[1]);  // MSB
+	data[5] = BMS_CAN_GetMSB(bms.bmsADC.ADC_voltTempCurr[1]);   // MSB
 }
 
 
