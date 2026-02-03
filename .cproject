@@ -166,14 +166,14 @@
 		<project id="BMS-Master.null.520745560" name="BMS-Master"/>
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
+	<storageModule moduleId="refreshScope"/>
 	<storageModule moduleId="scannerConfiguration">
 		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
-		<scannerConfigBuildInfo instanceId="com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.debug.2028752343;com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.debug.2028752343.;com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.1156230669;com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c.287154148">
+		<scannerConfigBuildInfo instanceId="com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.release.1751175865;com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.release.1751175865.;com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.491174135;com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c.1123352228">
 			<autodiscovery enabled="false" problemReportingEnabled="true" selectedProfileId=""/>
 		</scannerConfigBuildInfo>
-		<scannerConfigBuildInfo instanceId="com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.release.735701879;com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.release.735701879.;com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.487031519;com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c.1336718958">
+		<scannerConfigBuildInfo instanceId="com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.debug.1601440557;com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.debug.1601440557.;com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.1097982251;com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c.798392651">
 			<autodiscovery enabled="false" problemReportingEnabled="true" selectedProfileId=""/>
 		</scannerConfigBuildInfo>
 	</storageModule>
-	<storageModule moduleId="refreshScope"/>
 </cproject>
