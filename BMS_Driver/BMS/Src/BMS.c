@@ -25,11 +25,11 @@ extern uint32_t lastTick;
 HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_HandleTypeDef* bhcan2, ADC_HandleTypeDef* hadc, SPI_HandleTypeDef* hspi, UART_HandleTypeDef* huart){
 
 	// assigning handle objects
-	bms->bmsADC.hadc   = *hadc;
-	bms->bmsCAN.bhcan1 = *bhcan1;
-	bms->bmsCAN.bhcan2 = *bhcan2;
-	bms->hspi1 		   = *hspi;
-	bms->huart1        = *huart;
+	bms->bmsADC.hadc   = hadc;
+	bms->bmsCAN.bhcan1 = bhcan1;
+	bms->bmsCAN.bhcan2 = bhcan2;
+	bms->hspi1 		   = hspi;
+	bms->huart1        = huart;
 
 	// setting default status (normal) for BMS
 	bms->status     = BMS_NORMAL;
@@ -73,7 +73,7 @@ HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms){
 	}
 
 	// Send Data via CAN
-	CAN_HandleScheduled(&bms->bmsCAN.bhcan1, &bms->bmsCAN.CAN1_Buff);
+	CAN_HandleScheduled(bms->bmsCAN.bhcan1, &bms->bmsCAN.CAN1_Buff);
 
 
 	// Send Data via nrf905
@@ -116,7 +116,7 @@ HAL_StatusTypeDef BMS_Start_Peripherals(BMS_TypeDef* bms){
 	 ==============================================================================
 */
 	// Launching DMA for ADC
-	if(HAL_ADC_Start_DMA(&bms->bmsADC.hadc, (uint32_t*)bms->bmsADC.badc1.idma.BufferADC, ADC_BUFF_SIZE) != HAL_OK){
+	if(HAL_ADC_Start_DMA(bms->bmsADC.hadc, (uint32_t*)bms->bmsADC.badc1.idma.BufferADC, ADC_BUFF_SIZE) != HAL_OK){
 		return HAL_ERROR;
 	}
 
@@ -129,8 +129,8 @@ HAL_StatusTypeDef BMS_Start_Peripherals(BMS_TypeDef* bms){
 
 
 	// Checking if CAN2 is in sleep mode, if yes, then wake up CAN2
-	if(HAL_CAN_IsSleepActive(&bms->bmsCAN.bhcan2)){
-		if(HAL_CAN_WakeUp(&bms->bmsCAN.bhcan2) != HAL_OK){
+	if(HAL_CAN_IsSleepActive(bms->bmsCAN.bhcan2)){
+		if(HAL_CAN_WakeUp(bms->bmsCAN.bhcan2) != HAL_OK){
 			return HAL_ERROR;
 		}
 	}
@@ -150,11 +150,11 @@ HAL_StatusTypeDef BMS_Stop_Peripherals(BMS_TypeDef* bms){
 */
 
 	// Stopping ADC peripheral workflow for BMS in Standby or Error Mode
-	if(HAL_ADC_Stop(&bms->bmsADC.hadc) != HAL_OK){
+	if(HAL_ADC_Stop(bms->bmsADC.hadc) != HAL_OK){
 		return HAL_ERROR;
 	}
 
-	if(HAL_ADC_Stop_DMA(&bms->bmsADC.hadc) !=  HAL_OK){
+	if(HAL_ADC_Stop_DMA(bms->bmsADC.hadc) !=  HAL_OK){
 		return HAL_OK;
 	}
 
@@ -166,12 +166,12 @@ HAL_StatusTypeDef BMS_Stop_Peripherals(BMS_TypeDef* bms){
 
 
 	// Stopping CAN2 peripheral workflow for BMS in Standby or Error Mode
-	if(HAL_CAN_Stop(&bms->bmsCAN.bhcan2) != HAL_OK){
+	if(HAL_CAN_Stop(bms->bmsCAN.bhcan2) != HAL_OK){
 		return HAL_ERROR;
 	}
 
 	// Deactivating Interrupts for CAN2
-	if(HAL_CAN_DeactivateNotification(&bms->bmsCAN.bhcan2, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK){
+	if(HAL_CAN_DeactivateNotification(bms->bmsCAN.bhcan2, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK){
 		return HAL_ERROR;
 	}
 

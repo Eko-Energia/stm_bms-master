@@ -36,8 +36,8 @@
 
 /* Typedefs ----------------------------------------------------------------------------------  */
 typedef enum{
-	BMS_NORMAL = 0,
-	BMS_Error
+	BMS_NORMAL = 0,																	/*<BMS normal mode>*/
+	BMS_Error																		/*<BMS error mode>*/
 }BMS_StatusTypeDef_e;
 
 
@@ -45,12 +45,12 @@ typedef enum{
   * @brief  BMS's ADC object type
   */
 typedef struct{
-	ADC_HandleTypeDef   hadc;														// ADC  handle used in BMS's firmware | measuring data via ADC
+	ADC_HandleTypeDef*   hadc;														/*<ADC  handle used in BMS's firmware | measuring data via ADC>*/
 
-	uint16_t 			ADC_voltTempCurr[3];										// ADC's converted value (ready to send via CAN1) buff
+	uint16_t 			 ADC_voltTempCurr[3];										/*<ADC's converted value (ready to send via CAN1) buff>*/
 
-	ADC_ChannelsTypeDef  cadc1;														// ADC1's Channels' configurations object
-	ADC_BufferTypeDef	 badc1;														// ADC1's Channels' converted value buffer
+	ADC_ChannelsTypeDef  cadc1;														/*<ADC1's Channels' configurations object>*/
+	ADC_BufferTypeDef	 badc1;														/*<ADC1's Channels' converted value buffer>*/
 
 }ADC_BMSTypeDef;
 
@@ -59,12 +59,12 @@ typedef struct{
   */
 typedef struct{
 
-	CAN_HandleTypeDef    bhcan1;														// CAN1 handle used in BMS's firmware | sending   data via CAN1
-	CAN_HandleTypeDef    bhcan2;														// CAN2 handle used in BMS's firmware | receiving data via CAN1
+	CAN_HandleTypeDef*   bhcan1;													/*<CAN1 handle used in BMS's firmware | sending   data via CAN1>*/
+	CAN_HandleTypeDef*   bhcan2;													/*<CAN2 handle used in BMS's firmware | receiving data via CAN2>*/
 
-	CAN_ScheduledMsgList CAN1_Buff;													// CAN1 frames buffer
+	CAN_ScheduledMsgList CAN1_Buff;													/*<CAN1 frames buffer>*/
 
-	uint8_t 			 CAN2_temperatureCells[7][9];									// CAN2's received value (ready to send via CAN1) buff
+	uint8_t 			 CAN2_temperatureCells[7][9];								/*<CAN2's received value (ready to send via CAN1) buff>*/
 
 }CAN_BMSTypeDef;
 
@@ -75,27 +75,27 @@ typedef struct{
 typedef struct{
 
 
-	BMS_StatusTypeDef_e  status;													// current BMS status
-	BMS_StatusTypeDef_e  prevStatus;												// previous BMS status in case status change occurred
+	BMS_StatusTypeDef_e  status;													/*<current BMS status>*/
+	BMS_StatusTypeDef_e  prevStatus;												/*<previous BMS status in case status change occurred>*/
 
-	UART_HandleTypeDef  huart1;														// UART handle used in BMS's firmware | logging   data via UART1
-	SPI_HandleTypeDef   hspi1;														// SPI  handle used in BMS's firmware | sending   data via NRF905
+	UART_HandleTypeDef*  huart1;														/*<UART handle used in BMS's firmware | logging   data via UART1>*/
+	SPI_HandleTypeDef*   hspi1;														/*<SPI  handle used in BMS's firmware | sending   data via NRF905>*/
 
-	CAN_BMSTypeDef 		bmsCAN;														// BMS's CAN custom typedef object
-	ADC_BMSTypeDef 		bmsADC;														// BMS's ADC custom typedef object
+	CAN_BMSTypeDef 		 bmsCAN;														/*<BMS's CAN custom typedef object>*/
+	ADC_BMSTypeDef 		 bmsADC;														/*<BMS's ADC custom typedef object>*/
 }BMS_TypeDef;
 
 
 /* Macros ------------------------------------------------------------------------------------  */
 
 // ADC
-#define ADC_VOLTAGE_CH 12
-#define ADC_CURRENT_CH 11
-#define ADC_TEMP_CH    10
+#define ADC_VOLTAGE_CH 12															/*< ADC Voltage pin/ ADC channel>*/
+#define ADC_CURRENT_CH 11															/*< ADC current pin/ ADC channel>*/
+#define ADC_TEMP_CH    10															/*< ADC temperature pin/ ADC channel>*/
 
 // STM32F105
-#define BMS_VCC_SUPPLY      87.0f
-#define VCC_SUPPLY_VOLTAGE  3.3f
+#define BMS_VCC_SUPPLY      87.0f													/*< BMS's maximum supply voltage>*/
+#define VCC_SUPPLY_VOLTAGE  3.3f													/*< STM32F105 max Vcc voltage>*/
 
 
 #endif /* INC_BMS_TYPES_H_ */
