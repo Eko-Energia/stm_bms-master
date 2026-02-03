@@ -5816,37 +5816,37 @@ LOAD C:/ST/STM32CubeIDE_1.16.1/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.ext
  .debug_macro   0x00021bcc       0x16 ./EKO_Drivers/CAN/Src/can_driver.o
  .debug_macro   0x00021be2       0x16 ./EKO_Drivers/CAN/Src/can_driver.o
 
-.debug_line     0x00000000    0x1a8a7
- .debug_line    0x00000000      0xb58 ./BMS_Driver/ADC/Src/BMS_ADC_driver.o
- .debug_line    0x00000b58      0xa47 ./BMS_Driver/BMS/Src/BMS.o
- .debug_line    0x0000159f      0xabd ./BMS_Driver/CAN/Src/BMS_CAN_driver.o
- .debug_line    0x0000205c      0xa41 ./Core/Src/adc.o
- .debug_line    0x00002a9d      0x880 ./Core/Src/can.o
- .debug_line    0x0000331d      0x75d ./Core/Src/dma.o
- .debug_line    0x00003a7a      0x7bc ./Core/Src/gpio.o
- .debug_line    0x00004236      0xabe ./Core/Src/main.o
- .debug_line    0x00004cf4      0x7db ./Core/Src/spi.o
- .debug_line    0x000054cf      0x765 ./Core/Src/stm32f1xx_hal_msp.o
- .debug_line    0x00005c34      0x86e ./Core/Src/stm32f1xx_it.o
- .debug_line    0x000064a2      0x819 ./Core/Src/system_stm32f1xx.o
- .debug_line    0x00006cbb      0x80c ./Core/Src/tim.o
- .debug_line    0x000074c7      0x843 ./Core/Src/usart.o
- .debug_line    0x00007d0a       0x78 ./Core/Startup/startup_stm32f105r8tx.o
- .debug_line    0x00007d82      0xa11 ./Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal.o
- .debug_line    0x00008793     0x108c ./Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_adc.o
- .debug_line    0x0000981f      0xdc6 ./Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_adc_ex.o
- .debug_line    0x0000a5e5     0x11f6 ./Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_can.o
- .debug_line    0x0000b7db      0xbfb ./Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_cortex.o
- .debug_line    0x0000c3d6     0x133a ./Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_dma.o
- .debug_line    0x0000d710      0xaa8 ./Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_gpio.o
- .debug_line    0x0000e1b8      0xf4f ./Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_rcc.o
- .debug_line    0x0000f107      0xc55 ./Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_rcc_ex.o
- .debug_line    0x0000fd5c     0x1d33 ./Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_spi.o
- .debug_line    0x00011a8f     0x3581 ./Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_tim.o
- .debug_line    0x00015010     0x1992 ./Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_tim_ex.o
- .debug_line    0x000169a2     0x28ee ./Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_uart.o
- .debug_line    0x00019290      0xb43 ./EKO_Drivers/ADC/Src/adc_driver.o
- .debug_line    0x00019dd3      0xad4 ./EKO_Drivers/CAN/Src/can_driver.o
+.debug_line     0x00000000    0x1a8a8
+ .debug_line    0x00000000      0xb59 ./BMS_Driver/ADC/Src/BMS_ADC_driver.o
+ .debug_line    0x00000b59      0xa47 ./BMS_Driver/BMS/Src/BMS.o
+ .debug_line    0x000015a0      0xabd ./BMS_Driver/CAN/Src/BMS_CAN_driver.o
+ .debug_line    0x0000205d      0xa41 ./Core/Src/adc.o
+ .debug_line    0x00002a9e      0x880 ./Core/Src/can.o
+ .debug_line    0x0000331e      0x75d ./Core/Src/dma.o
+ .debug_line    0x00003a7b      0x7bc ./Core/Src/gpio.o
+ .debug_line    0x00004237      0xabe ./Core/Src/main.o
+ .debug_line    0x00004cf5      0x7db ./Core/Src/spi.o
+ .debug_line    0x000054d0      0x765 ./Core/Src/stm32f1xx_hal_msp.o
+ .debug_line    0x00005c35      0x86e ./Core/Src/stm32f1xx_it.o
+ .debug_line    0x000064a3      0x819 ./Core/Src/system_stm32f1xx.o
+ .debug_line    0x00006cbc      0x80c ./Core/Src/tim.o
+ .debug_line    0x000074c8      0x843 ./Core/Src/usart.o
+ .debug_line    0x00007d0b       0x78 ./Core/Startup/startup_stm32f105r8tx.o
+ .debug_line    0x00007d83      0xa11 ./Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal.o
+ .debug_line    0x00008794     0x108c ./Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_adc.o
+ .debug_line    0x00009820      0xdc6 ./Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_adc_ex.o
+ .debug_line    0x0000a5e6     0x11f6 ./Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_can.o
+ .debug_line    0x0000b7dc      0xbfb ./Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_cortex.o
+ .debug_line    0x0000c3d7     0x133a ./Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_dma.o
+ .debug_line    0x0000d711      0xaa8 ./Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_gpio.o
+ .debug_line    0x0000e1b9      0xf4f ./Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_rcc.o
+ .debug_line    0x0000f108      0xc55 ./Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_rcc_ex.o
+ .debug_line    0x0000fd5d     0x1d33 ./Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_spi.o
+ .debug_line    0x00011a90     0x3581 ./Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_tim.o
+ .debug_line    0x00015011     0x1992 ./Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_tim_ex.o
+ .debug_line    0x000169a3     0x28ee ./Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_uart.o
+ .debug_line    0x00019291      0xb43 ./EKO_Drivers/ADC/Src/adc_driver.o
+ .debug_line    0x00019dd4      0xad4 ./EKO_Drivers/CAN/Src/can_driver.o
 
 .debug_str      0x00000000    0xbda80
  .debug_str     0x00000000    0xb8941 ./BMS_Driver/ADC/Src/BMS_ADC_driver.o

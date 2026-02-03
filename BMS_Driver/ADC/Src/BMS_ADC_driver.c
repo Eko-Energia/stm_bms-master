@@ -29,7 +29,6 @@ HAL_StatusTypeDef BMS_ADC_ReadValues(BMS_TypeDef* bms, ADC_HandleTypeDef* hadc){
 		return HAL_ERROR;
 	}
 
-
 	// reading current
 	if(BMS_ADC_Read_Current(bms, hadc) != HAL_OK){
 		return HAL_ERROR;
@@ -109,6 +108,13 @@ HAL_StatusTypeDef BMS_ADC_Read_Current(BMS_TypeDef* bms, ADC_HandleTypeDef* hadc
 	if(ADC_ReadChannel(hadc, &bms->cadc1, &bms->badc1, ADC_CURRENT_CH, &current_b) != HAL_OK){
 		return HAL_ERROR;
 	}
+
+	/*
+	 // Delete comments while conducting tests
+	 if(ADC_G
+
+	 */
+
 
 	// calculating real value of current
 	current_f = ((float)current_b - 2108.0f)/4.0f;

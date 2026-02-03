@@ -37,11 +37,11 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   CONTENTS, READONLY, DEBUGGING, OCTETS
  16 .debug_macro  00021bf8  00000000  00000000  0002440f  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 17 .debug_line   0001a8a7  00000000  00000000  00046007  2**0
+ 17 .debug_line   0001a8a8  00000000  00000000  00046007  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 18 .debug_str    000bda80  00000000  00000000  000608ae  2**0
+ 18 .debug_str    000bda80  00000000  00000000  000608af  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 19 .comment      00000043  00000000  00000000  0011e32e  2**0
+ 19 .comment      00000043  00000000  00000000  0011e32f  2**0
                   CONTENTS, READONLY
  20 .debug_frame  00005040  00000000  00000000  0011e374  2**2
                   CONTENTS, READONLY, DEBUGGING, OCTETS
@@ -1231,7 +1231,6 @@ HAL_StatusTypeDef BMS_ADC_ReadValues(BMS_TypeDef* bms, ADC_HandleTypeDef* hadc){
  8000e9c:	e009      	b.n	8000eb2 <BMS_ADC_ReadValues+0x42>
 	}
 
-
 	// reading current
 	if(BMS_ADC_Read_Current(bms, hadc) != HAL_OK){
  8000e9e:	6839      	ldr	r1, [r7, #0]
@@ -1506,7 +1505,9 @@ HAL_StatusTypeDef BMS_ADC_Read_Current(BMS_TypeDef* bms, ADC_HandleTypeDef* hadc
 		return HAL_ERROR;
  8001060:	2301      	movs	r3, #1
  8001062:	e01f      	b.n	80010a4 <BMS_ADC_Read_Current+0x74>
-	}
+
+	 */
+
 
 	// calculating real value of current
 	current_f = ((float)current_b - 2108.0f)/4.0f;
