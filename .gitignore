@@ -26,4 +26,6 @@ Release/
 *.su
 *.cyclo
 .settings/
+*.xml
 *.mk
+*.scratch

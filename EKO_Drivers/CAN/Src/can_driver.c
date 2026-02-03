@@ -108,7 +108,7 @@ HAL_StatusTypeDef CAN_RemoveScheduledMessage(uint32_t id, CAN_ScheduledMsgList* 
 void CAN_HandleScheduled(CAN_HandleTypeDef *hcan, CAN_ScheduledMsgList* buffer)
 {
 	uint32_t currentTick = HAL_GetTick();
-	for(uint8_t i = 0; i < buffer->size;i++)
+	for(uint8_t i = 0; i < buffer->size; i++)
 	{
 		CAN_ScheduledMsg *msg = &buffer->list[i];
 		if(currentTick > msg->last_tick + msg->period_ms)
