@@ -28,3 +28,4 @@ Release/
 .settings/
 *.xml
 *.mk
+*.scratch
