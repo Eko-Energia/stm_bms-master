@@ -36,11 +36,6 @@ HAL_StatusTypeDef BMS_CAN_Init(BMS_TypeDef* bms){
 	 * adding all CAN frames, which are co-related to BMS
 	 */
 
-	// adding node's frames
-	if(BMS_CAN_Add_Message(bms, BMS_NODE_ID, BMS_NODE_DLC, BMS_NODE_PERIOD) != HAL_OK){
-		return HAL_ERROR;
-	}
-
 	// Adding frames co-related to peripherals data
 	if(BMS_CAN_Add_PeripFrames(bms) != HAL_OK){
 		return HAL_ERROR;

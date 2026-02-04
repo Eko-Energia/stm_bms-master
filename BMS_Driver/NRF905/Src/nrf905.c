@@ -53,6 +53,12 @@ HAL_StatusTypeDef BMS_NRF905_ChangeMode(BMS_TypeDef* bms, NRF905_StatusTypeDef_e
 // NRF905 operations
 HAL_SPI_StateTypeDef BMS_NRF905_Init(BMS_TypeDef* bms){
 
+	uint8_t* rfConfigData = 0; // init of variable which stores RF Config data
+
+	bms->bmsNRF905.nrfConfig.GetRFConfig = BMS_NRF905_GetConfigData;	// assigning function definition
+
+	bms->bmsNRF905.nrfConfig.GetRFConfig(rfConfigData);					// fetching rfConfig data
+
 	// Powering down SPI controller as a default mode
 	if(BMS_NRF905_SPI_ChangeMode(bms, BMS_NRF905_SPI_PWRDOWN) != HAL_OK){
 		return HAL_ERROR;
@@ -60,11 +66,11 @@ HAL_SPI_StateTypeDef BMS_NRF905_Init(BMS_TypeDef* bms){
 
 	// Turning on standby mode to enable SPI programming during standby mode
 	if(BMS_NRF905_SPI_ChangeMode(bms, BMS_NRF905_SPI_STANDBY) != HAL_OK){
-		return HAL_OK;
+		return HAL_ERROR;
 	}
 
 	// Send RF configuration to NRF905
-	if(BMS_NRF905_WriteReg(bms, NRF905_CMD_WC, (uint8_t*)bms->bmsNRF905.nrfConfig.GetRFConfig, 10) != HAL_OK){
+	if(BMS_NRF905_WriteReg(bms, NRF905_CMD_WC, rfConfigData, 10) != HAL_OK){
 		return HAL_ERROR;
 	}
 
@@ -83,7 +89,7 @@ HAL_StatusTypeDef BMS_NRF905_Mode_Normal(BMS_TypeDef* bms){
 	for(int i = 0; i < bms->bmsCAN.CAN1_Buff.size; ++i){
 
 		// Sending current frame with its ID
-		if(BMS_NRF905_Transmit(bms, &bms->bmsCAN.CAN1_Buff.list[i].header.DLC) != HAL_OK){
+		if(BMS_NRF905_Transmit(bms, &bms->bmsCAN.CAN1_Buff.list[i].header.StdId) != HAL_OK){
 			return HAL_ERROR;
 		}
 
@@ -123,8 +129,8 @@ HAL_StatusTypeDef BMS_NRF905_Set_ErrorMode(BMS_TypeDef* bms){
 
 HAL_StatusTypeDef BMS_NRF905_Transmit(BMS_TypeDef* bms, uint32_t* id){
 
-	uint8_t* addr = 0;		// init of variable which stores 4 bytes od address to be sent via SPI
-	uint8_t* data = 0;		// initialization of variable, which stores 32-bits of payload (according to datasheet)
+	uint8_t addr[NRF905_ADDR_SIZE];		    // init of variable which stores 4 bytes od address to be sent via SPI
+	uint8_t data[NRF905_PAYLOAD_SIZE];		// initialization of variable, which stores 32-bits of payload (according to datasheet)
 
 	// Extracting 32-bit addr into 4-bytes of addr
 	if(BMS_NRF905_ExtractAddr(bms, (uint8_t*)id, addr) != HAL_OK){
@@ -193,7 +199,7 @@ void BMS_NRF905_GetConfigData(uint8_t* data){
 			  (bms.bmsNRF905.nrfConfig.CRC_EN	    <<  6) |
 			  (bms.bmsNRF905.nrfConfig.XOF			<<  3) |
 			  (bms.bmsNRF905.nrfConfig.UP_CLK_EN	<<  2) |
-			  (-bms.bmsNRF905.nrfConfig.UP_CLK_FREQ	     );
+			  (bms.bmsNRF905.nrfConfig.UP_CLK_FREQ	     );
 
 }
 
