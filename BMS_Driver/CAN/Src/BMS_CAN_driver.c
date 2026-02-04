@@ -23,21 +23,26 @@ extern BMS_TypeDef bms;
 /* Functions' bodies -------------------------------------------------*/
 HAL_StatusTypeDef BMS_CAN_Init(BMS_TypeDef* bms){
 
-	// Adding peripherals frames | co-related to ADC and CAN2
-	if(BMS_CAN_AddPeripheralFrames(bms) != HAL_OK){
+	// Init of CAN1 and CAN2 to start communication via these buses
+	CAN_Init(bms->bmsCAN.bhcan1);
+	CAN_Init(bms->bmsCAN.bhcan2);
+
+	// launching interrupts for CAN2
+	if(HAL_CAN_ActivateNotification(bms->bmsCAN.bhcan2, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK){
 		return HAL_ERROR;
 	}
 
 	// Launching CAN1
 	CAN_Init(bms->bmsCAN.bhcan1);
 
-	// Starting CAN2
-	CAN_Init(bms->bmsCAN.bhcan2);
-
-	// enabling interrupts for CAN2
-	if(HAL_CAN_ActivateNotification(bms->bmsCAN.bhcan2, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK){
+	// Adding frames co-related to peripherals data
+	if(BMS_CAN_Add_PeripFrames(bms) != HAL_OK){
 		return HAL_ERROR;
 	}
+
+	// Launching RCC clock for CAN1 and CAN2
+	__HAL_RCC_CAN1_CLK_ENABLE();
+	__HAL_RCC_CAN2_CLK_ENABLE();
 
 	return HAL_OK;
 }
@@ -135,7 +140,6 @@ void BMS_CAN_Get_ADC_Data(uint8_t *data){
 	data[5] = BMS_CAN_GetMSB(bms.bmsADC.ADC_voltTempCurr[1]);   // MSB
 }
 
-
 void BMS_CAN_PackCAN2Temps(uint8_t* data, uint8_t thermId){
 	for(int i = 0; i < 7; ++i){
 		data[i] = (uint8_t)bms.bmsCAN.CAN2_temperatureCells[i][thermId];
@@ -153,6 +157,7 @@ void BMS_CAN_Get_CAN2_Data_Therm7(uint8_t *data){ BMS_CAN_PackCAN2Temps(data, 6)
 void BMS_CAN_Get_CAN2_Data_Therm8(uint8_t *data){ BMS_CAN_PackCAN2Temps(data, 7);}
 void BMS_CAN_Get_CAN2_Data_Therm9(uint8_t *data){ BMS_CAN_PackCAN2Temps(data, 8);}
 
+
 uint8_t BMS_CAN_GetMSB(uint16_t value){
 	return (uint8_t)(value >> 8);
 }
@@ -162,24 +167,23 @@ uint8_t BMS_CAN_GetLSB(uint16_t value){
 }
 
 
-
 HAL_StatusTypeDef BMS_CAN_ScallingParams(BMS_TypeDef* bms, uint8_t channel, float* value_f){
 
 	switch(channel){
 		case ADC_VOLTAGE_CH:
 
 			// calculating binary type of read voltage with factor and offset
-			bms->bmsADC.ADC_voltTempCurr[0] = (*value_f - VOLTAGE_OFFSET) * VOLTAGE_GAIN;
+			bms->bmsADC.ADC_voltTempCurr[0] = (*value_f - VOLTAGE_OFFSET)     / VOLTAGE_GAIN;
 			break;
 		case ADC_CURRENT_CH:
 
 			// calculating binary type of read voltage with factor and offset
-			bms->bmsADC.ADC_voltTempCurr[2] = (*value_f - CURRENT_OFFSET) * CURRENT_GAIN;
+			bms->bmsADC.ADC_voltTempCurr[2] = (*value_f - CURRENT_OFFSET)     / CURRENT_GAIN;
 			break;
 		case ADC_TEMP_CH:
 
 			// calculating binary type of read voltage with factor and offset
-			bms->bmsADC.ADC_voltTempCurr[1] = (*value_f - TEMPERATURE_OFFSET) * TEMPERATURE_GAIN;
+			bms->bmsADC.ADC_voltTempCurr[1] = (*value_f - TEMPERATURE_OFFSET) / TEMPERATURE_GAIN;
 			break;
 		default:
 

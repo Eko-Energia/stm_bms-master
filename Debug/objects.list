@@ -1,6 +1,7 @@
 "./BMS_Driver/ADC/Src/BMS_ADC_driver.o"
 "./BMS_Driver/BMS/Src/BMS.o"
 "./BMS_Driver/CAN/Src/BMS_CAN_driver.o"
+"./BMS_Driver/NRF905/Src/nrf905.o"
 "./Core/Src/adc.o"
 "./Core/Src/can.o"
 "./Core/Src/dma.o"

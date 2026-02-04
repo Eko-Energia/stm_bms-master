@@ -30,7 +30,6 @@ extern "C" {
 
 /* Variables ---------------------------------------------------------*/
 
-
 /* Macros ----------------------------------------------------------------------------------  */
 /*
 	 ==============================================================================
@@ -57,7 +56,6 @@ extern "C" {
 #define BMS_VOLTCURTEMP_PERIOD  200
 #define BMS_THERMx_PERIOD		100
 
-
 // CAN Frames IDs
 #define BMS_NODE_ID		        128
 #define BMS_VOLTCURTEMP_ID      130
@@ -81,8 +79,6 @@ HAL_StatusTypeDef BMS_CAN_AddMessage(BMS_TypeDef* bms, uint32_t Id, uint8_t DLC,
 HAL_StatusTypeDef BMS_CAN_AddPeripheralFrames(BMS_TypeDef* bms);
 
 void 			  BMS_CAN_Get_ADC_Data(uint8_t *data);
-
-void 			  BMS_CAN_Get_Node_Data(uint8_t *data);
 
 void 			  BMS_CAN_PackCAN2Temps(uint8_t* data, uint8_t thermId);
 
@@ -110,7 +106,7 @@ uint8_t 		  BMS_CAN_GetLSB(uint16_t value);
 
 HAL_StatusTypeDef BMS_CAN_ScallingParams(BMS_TypeDef* bms, uint8_t channel, float* value_f);
 
-void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan);
+void 			  HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan);
 
 #ifdef __cplusplus
 }

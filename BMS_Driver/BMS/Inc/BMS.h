@@ -10,7 +10,7 @@
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2025 AGH Eko-Energy.
+  * Copyright (c) 2026 AGH Eko-Energy.
   * All rights reserved.
   *
   ******************************************************************************
@@ -29,6 +29,7 @@ extern "C" {
 #include "BMS_Types.h"
 
 /* Macros ----------------------------------------------------------------------------------  */
+#define BMS_LED_PERIOD (500)
 
 /* Variables -------------------------------------------------------------------------------  */
 extern uint32_t lastTick;
@@ -49,6 +50,9 @@ HAL_StatusTypeDef BMS_Start_Peripherals(BMS_TypeDef* bms);
 
 HAL_StatusTypeDef BMS_Stop_Peripherals(BMS_TypeDef* bms);
 
+HAL_StatusTypeDef BMS_Status_Change(BMS_TypeDef* bms,BMS_StatusTypeDef_e status);
+
+void BMS_LED_Blink(BMS_TypeDef* bms);
 
 void 			  BMS_Mode_LEDBlink(BMS_TypeDef* bms);
 
