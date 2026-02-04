@@ -51,9 +51,9 @@ HAL_StatusTypeDef BMS_NRF905_ChangeMode(BMS_TypeDef* bms, NRF905_StatusTypeDef_e
 
 
 // NRF905 operations
-HAL_SPI_StateTypeDef BMS_NRF905_Init(BMS_TypeDef* bms){
+HAL_StatusTypeDef BMS_NRF905_Init(BMS_TypeDef* bms){
 
-	uint8_t* rfConfigData = 0; // init of variable which stores RF Config data
+	uint8_t* rfConfigData; // init of variable which stores RF Config data
 
 	bms->bmsNRF905.nrfConfig.GetRFConfig = BMS_NRF905_GetConfigData;	// assigning function definition
 

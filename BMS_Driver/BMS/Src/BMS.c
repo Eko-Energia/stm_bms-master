@@ -266,7 +266,7 @@ void BMS_LED_Blink(BMS_TypeDef* bms){
 			default:
 
 				// returning error in case of wrong state
-				return HAL_ERROR;
+				return;
 
 				break;
 		}
