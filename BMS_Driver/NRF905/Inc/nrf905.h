@@ -48,7 +48,7 @@ HAL_StatusTypeDef 	 BMS_NRF905_ChangeMode(BMS_TypeDef* bms, NRF905_StatusTypeDef
 
 // NRF905 operations
 
-HAL_SPI_StateTypeDef BMS_NRF905_Init(BMS_TypeDef* bms);
+HAL_StatusTypeDef    BMS_NRF905_Init(BMS_TypeDef* bms);
 
 HAL_StatusTypeDef 	 BMS_NRF905_Mode_Normal(BMS_TypeDef* bms);
 

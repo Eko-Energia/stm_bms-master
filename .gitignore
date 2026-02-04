@@ -16,8 +16,8 @@
 .bak
 .xlsx
 .dbc
-Debug/
-Release/
+Debug/*
+Release/*
 *.elf
 *.list
 *.map

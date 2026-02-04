@@ -50,6 +50,8 @@
 									<listOptionValue builtIn="false" value="../BMS_Driver/CAN/Inc"/>
 									<listOptionValue builtIn="false" value="../BMS_Driver/ADC/Inc"/>
 									<listOptionValue builtIn="false" value="../BMS_Driver/NRF905/Inc"/>
+									<listOptionValue builtIn="false" value="../EKO_Drivers/ADC/Inc"/>
+									<listOptionValue builtIn="false" value="../EKO_Drivers/CAN/Inc"/>
 								</option>
 								<inputType id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c.287154148" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c"/>
 							</tool>
@@ -82,6 +84,7 @@
 						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="BMS_Driver/NRF905/Src"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Core"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Drivers"/>
+						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="EKO_Drivers"/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -164,12 +167,15 @@
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.pathentry"/>
 	<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-		<project id="BMS-Master.null.520745560" name="BMS-Master"/>
+		<project id="BMS-Master.null.1458697917" name="BMS-Master"/>
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
 	<storageModule moduleId="refreshScope"/>
 	<storageModule moduleId="scannerConfiguration">
 		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		<scannerConfigBuildInfo instanceId="com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.debug.2028752343;com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.debug.2028752343.;com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.1156230669;com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c.287154148">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
 		<scannerConfigBuildInfo instanceId="com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.release.1751175865;com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.release.1751175865.;com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.491174135;com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c.1123352228">
 			<autodiscovery enabled="false" problemReportingEnabled="true" selectedProfileId=""/>
 		</scannerConfigBuildInfo>

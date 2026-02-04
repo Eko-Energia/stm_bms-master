@@ -42,7 +42,7 @@ HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms);
 
 HAL_StatusTypeDef BMS_Mode_Error(BMS_TypeDef* bms);
 
-void 			  BMS_Mode_Change(BMS_TypeDef* bms, BMS_StatusTypeDef_e status);
+HAL_StatusTypeDef BMS_Mode_Change(BMS_TypeDef* bms, BMS_StatusTypeDef_e status);
 
 HAL_StatusTypeDef BMS_Log_Data(BMS_TypeDef* bms);
 
@@ -51,8 +51,6 @@ HAL_StatusTypeDef BMS_Start_Peripherals(BMS_TypeDef* bms);
 HAL_StatusTypeDef BMS_Stop_Peripherals(BMS_TypeDef* bms);
 
 HAL_StatusTypeDef BMS_Status_Change(BMS_TypeDef* bms,BMS_StatusTypeDef_e status);
-
-void BMS_LED_Blink(BMS_TypeDef* bms);
 
 void 			  BMS_Mode_LEDBlink(BMS_TypeDef* bms);
 
