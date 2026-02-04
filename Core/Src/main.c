@@ -50,6 +50,7 @@
 
 /* USER CODE BEGIN PV */
 BMS_TypeDef bms;
+uint32_t lastTick;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -116,6 +117,10 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
+  // reading current tick of firmware
+  lastTick = HAL_GetTick();
+
   while (1)
   {
 	 switch(bms.status){
@@ -146,9 +151,7 @@ int main(void)
 	 }
 
 	 // blink LED in correct, for current BMS's status, way
-	if(BMS_LED_Blink(&bms) != HAL_OK){
-		Error_Handler();
-	}
+	 BMS_LED_Blink(&bms);
 
     /* USER CODE END WHILE */
 

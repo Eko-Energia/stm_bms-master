@@ -17,6 +17,9 @@
 /* Includes ----------------------------------------------------------------------------------  */
 #include "BMS.h"
 
+/* Variable --------------------------------------------------------------------------------  */
+extern uint32_t lastTick;
+
 /* Functions' bodies -------------------------------------------------------------------------  */
 
 HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_HandleTypeDef* bhcan2, ADC_HandleTypeDef* hadc, SPI_HandleTypeDef* hspi, UART_HandleTypeDef* huart){
@@ -232,13 +235,14 @@ HAL_StatusTypeDef BMS_Status_Change(BMS_TypeDef* bms,BMS_StatusTypeDef_e status)
 	return HAL_OK;
 }
 
-HAL_StatusTypeDef BMS_LED_Blink(BMS_TypeDef* bms){
+void BMS_LED_Blink(BMS_TypeDef* bms){
 
 	// Universal variables
-	uint32_t lastTick = HAL_GetTick() - 1;
+	static uint32_t now;
+	now = HAL_GetTick() - 1;
 
 
-	if(lastTick - HAL_GetTick() - 1 >= 500){
+	if(now - lastTick - 1 >= BMS_LED_PERIOD){
 
 		// state machine
 		switch(bms->status){
@@ -269,8 +273,6 @@ HAL_StatusTypeDef BMS_LED_Blink(BMS_TypeDef* bms){
 
 
 		// overwrite last tick
-		lastTick = HAL_GetTick() - 1;
+		lastTick = now;
 	}
-
-	return HAL_OK;
 }
