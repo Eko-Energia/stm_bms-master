@@ -32,9 +32,8 @@ HAL_StatusTypeDef BMS_CAN_Init(BMS_TypeDef* bms){
 		return HAL_ERROR;
 	}
 
-	/*
-	 * adding all CAN frames, which are co-related to BMS
-	 */
+	// Launching CAN1
+	CAN_Init(bms->bmsCAN.bhcan1);
 
 	// Adding frames co-related to peripherals data
 	if(BMS_CAN_Add_PeripFrames(bms) != HAL_OK){
@@ -48,7 +47,7 @@ HAL_StatusTypeDef BMS_CAN_Init(BMS_TypeDef* bms){
 	return HAL_OK;
 }
 
-HAL_StatusTypeDef BMS_CAN_Add_Message(BMS_TypeDef* bms, uint32_t Id, uint8_t DLC, uint32_t period){
+HAL_StatusTypeDef BMS_CAN_AddMessage(BMS_TypeDef* bms, uint32_t Id, uint8_t DLC, uint32_t period){
 
 	// initialize CAN message
 	CAN_ScheduledMsg msg;
@@ -63,41 +62,40 @@ HAL_StatusTypeDef BMS_CAN_Add_Message(BMS_TypeDef* bms, uint32_t Id, uint8_t DLC
 
 	// assigning correct return of data function to correct msg
 	switch(Id){
-		break;
-	case BMS_VOLTCURTEMP_ID:
-		msg.GetData = BMS_CAN_Get_ADC_Data;
-		break;
-	case BMS_THERM1_ID:
-		msg.GetData = BMS_CAN_Get_CAN2_Data_Therm1;
-		break;
-	case BMS_THERM2_ID:
-		msg.GetData = BMS_CAN_Get_CAN2_Data_Therm2;
+		case BMS_VOLTCURTEMP_ID:
+			msg.GetData = BMS_CAN_Get_ADC_Data;
 			break;
-	case BMS_THERM3_ID:
-		msg.GetData = BMS_CAN_Get_CAN2_Data_Therm3;
+		case BMS_THERM1_ID:
+			msg.GetData = BMS_CAN_Get_CAN2_Data_Therm1;
 			break;
-	case BMS_THERM4_ID:
-		msg.GetData = BMS_CAN_Get_CAN2_Data_Therm4;
-			break;
-	case BMS_THERM5_ID:
-		msg.GetData = BMS_CAN_Get_CAN2_Data_Therm5;
-			break;
-	case BMS_THERM6_ID:
-		msg.GetData = BMS_CAN_Get_CAN2_Data_Therm6;
-			break;
-	case BMS_THERM7_ID:
-		msg.GetData = BMS_CAN_Get_CAN2_Data_Therm7;
-			break;
-	case BMS_THERM8_ID:
-		msg.GetData = BMS_CAN_Get_CAN2_Data_Therm8;
-			break;
-	case BMS_THERM9_ID:
-		msg.GetData = BMS_CAN_Get_CAN2_Data_Therm9;
-			break;
-	default:
+		case BMS_THERM2_ID:
+			msg.GetData = BMS_CAN_Get_CAN2_Data_Therm2;
+				break;
+		case BMS_THERM3_ID:
+			msg.GetData = BMS_CAN_Get_CAN2_Data_Therm3;
+				break;
+		case BMS_THERM4_ID:
+			msg.GetData = BMS_CAN_Get_CAN2_Data_Therm4;
+				break;
+		case BMS_THERM5_ID:
+			msg.GetData = BMS_CAN_Get_CAN2_Data_Therm5;
+				break;
+		case BMS_THERM6_ID:
+			msg.GetData = BMS_CAN_Get_CAN2_Data_Therm6;
+				break;
+		case BMS_THERM7_ID:
+			msg.GetData = BMS_CAN_Get_CAN2_Data_Therm7;
+				break;
+		case BMS_THERM8_ID:
+			msg.GetData = BMS_CAN_Get_CAN2_Data_Therm8;
+				break;
+		case BMS_THERM9_ID:
+			msg.GetData = BMS_CAN_Get_CAN2_Data_Therm9;
+				break;
+		default:
 
-		// return error status in case wrong Id has been given
-		return HAL_ERROR;
+			// return error status in case wrong Id has been given
+			return HAL_ERROR;
 		break;
 	}
 
@@ -110,16 +108,16 @@ HAL_StatusTypeDef BMS_CAN_Add_Message(BMS_TypeDef* bms, uint32_t Id, uint8_t DLC
 	return HAL_OK;
 }
 
-HAL_StatusTypeDef BMS_CAN_Add_PeripFrames(BMS_TypeDef* bms){
+HAL_StatusTypeDef BMS_CAN_AddPeripheralFrames(BMS_TypeDef* bms){
 
 	// adding frames with voltage, temperature and current
-	if(BMS_CAN_Add_Message(bms, BMS_VOLTCURTEMP_ID, BMS_VOLTCURTEMP_DLC, BMS_VOLTCURTEMP_PERIOD) != HAL_OK){
+	if(BMS_CAN_AddMessage(bms, BMS_VOLTCURTEMP_ID, BMS_VOLTCURTEMP_DLC, BMS_VOLTCURTEMP_PERIOD) != HAL_OK){
 		return HAL_ERROR;
 	}
 
 	// Adding frames co-related to PCBs' cells' temperatures of thermistors
 	for(int i = 0; i < 9; ++i){
-		if(BMS_CAN_Add_Message(bms, (BMS_THERM1_ID + i), BMS_THERMx_DLC, BMS_THERMx_PERIOD) != HAL_OK){
+		if(BMS_CAN_AddMessage(bms, (BMS_THERM1_ID + i), BMS_THERMx_DLC, BMS_THERMx_PERIOD) != HAL_OK){
 			return HAL_ERROR;
 		}
 	}
@@ -131,15 +129,15 @@ void BMS_CAN_Get_ADC_Data(uint8_t *data){
 
 	// setting data with ADC's measured voltage
 	data[0] = BMS_CAN_GetLSB(bms.bmsADC.ADC_voltTempCurr[0]);	// LSB
-	data[1] = BMS_CAN_GetMSB(bms.bmsADC.ADC_voltTempCurr[0]);  // MSB
+	data[1] = BMS_CAN_GetMSB(bms.bmsADC.ADC_voltTempCurr[0]);   // MSB
 
 	// setting data with ADC's measured current
 	data[2] = BMS_CAN_GetLSB(bms.bmsADC.ADC_voltTempCurr[2]);	// LSB
-	data[3] = BMS_CAN_GetMSB(bms.bmsADC.ADC_voltTempCurr[2]);  // MSB
+	data[3] = BMS_CAN_GetMSB(bms.bmsADC.ADC_voltTempCurr[2]);   // MSB
 
 	// setting data with ADC's measured temperature
 	data[4] = BMS_CAN_GetLSB(bms.bmsADC.ADC_voltTempCurr[1]);	// LSB
-	data[5] = BMS_CAN_GetMSB(bms.bmsADC.ADC_voltTempCurr[1]);  // MSB
+	data[5] = BMS_CAN_GetMSB(bms.bmsADC.ADC_voltTempCurr[1]);   // MSB
 }
 
 void BMS_CAN_PackCAN2Temps(uint8_t* data, uint8_t thermId){
@@ -200,17 +198,17 @@ HAL_StatusTypeDef BMS_CAN_ScallingParams(BMS_TypeDef* bms, uint8_t channel, floa
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan){
 	if(hcan->Instance == CAN2){
 
-		CAN_RxHeaderTypeDef RxHeader;	// Init header for Rx frame
-		uint8_t rxData;				// Init data storage for Rx frame's data
+		static CAN_RxHeaderTypeDef RxHeader;	// Init header for Rx frame
+		static uint8_t* rxData;				// Init data storage for Rx frame's data
 
-		if(HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &RxHeader, &rxData) == HAL_OK){
+		if(HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &RxHeader, rxData) == HAL_OK){
 
 			// calculating received Number of PCB which sent frame and thermistor index, whose temperature has been sent.
 			int pcbIndex = (RxHeader.StdId - 200) / 10;						// extracting number from Id, PCB index stand as a second number in frame's ID
 			uint8_t thermIndex = RxHeader.StdId - 200 - pcbIndex * 10;		// extracting number from Id, thermistor index stand as a third number in frame's ID
 
 			// overwriting container for cells' temperatures with new value. indexes are decreamented cause indexes in arrays starts from index 0, but calculated numbers start from 1
-			bms.bmsCAN.CAN2_temperatureCells[pcbIndex - 1][thermIndex - 1] = rxData;
+			bms.bmsCAN.CAN2_temperatureCells[pcbIndex - 1][thermIndex - 1] = rxData[0];
 
 		}
 	}

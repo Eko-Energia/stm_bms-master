@@ -123,35 +123,30 @@ int main(void)
 
   while (1)
   {
-	 switch(bms.status){
-		 case BMS_NORMAL:
+	  // Blinking LED according to current BMS's state
+	  BMS_Mode_LEDBlink(&bms);
 
-			 // Launching Normal mode for BMS
-			 if(BMS_Mode_Normal(&bms) != HAL_OK){
+	  // state machine
+	  switch(bms.status){
+		  case BMS_NORMAL:
 
-				 // Changing status in case error occurred during Active status process
-				 if(BMS_Status_Change(&bms, BMS_Error) != HAL_OK){
-					 Error_Handler();
-				 }
-
+			  // Launching Normal mode for BMS
+			  if(BMS_Mode_Normal(&bms) != HAL_OK){
+				  BMS_Mode_Change(&bms, BMS_Error);
 			 }
 
 			 break;
 		 case BMS_Error:
 
 			 // Launching Normal mode for BMS
-			 if(BMS_Mode_Error(&bms) != HAL_OK){
-				 Error_Handler();
-			 }
+			 BMS_Mode_Error(&bms);
+
 
 			 break;
 		 default:
 			 break;
 
 	 }
-
-	 // blink LED in correct, for current BMS's status, way
-	 BMS_LED_Blink(&bms);
 
     /* USER CODE END WHILE */
 

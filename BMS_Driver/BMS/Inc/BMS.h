@@ -31,8 +31,9 @@ extern "C" {
 /* Macros ----------------------------------------------------------------------------------  */
 #define BMS_LED_PERIOD (500)
 
-/* Variable --------------------------------------------------------------------------------  */
+/* Variables -------------------------------------------------------------------------------  */
 extern uint32_t lastTick;
+
 
 /* Functions Prototypes --------------------------------------------------------------------  */
 HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_HandleTypeDef* bhcan2, ADC_HandleTypeDef* hadc, SPI_HandleTypeDef* hspi, UART_HandleTypeDef* huart);
@@ -40,6 +41,8 @@ HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_Han
 HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms);
 
 HAL_StatusTypeDef BMS_Mode_Error(BMS_TypeDef* bms);
+
+void 			  BMS_Mode_Change(BMS_TypeDef* bms, BMS_StatusTypeDef_e status);
 
 HAL_StatusTypeDef BMS_Log_Data(BMS_TypeDef* bms);
 
@@ -50,5 +53,11 @@ HAL_StatusTypeDef BMS_Stop_Peripherals(BMS_TypeDef* bms);
 HAL_StatusTypeDef BMS_Status_Change(BMS_TypeDef* bms,BMS_StatusTypeDef_e status);
 
 void BMS_LED_Blink(BMS_TypeDef* bms);
+
+void 			  BMS_Mode_LEDBlink(BMS_TypeDef* bms);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* INC_BMS_H_ */

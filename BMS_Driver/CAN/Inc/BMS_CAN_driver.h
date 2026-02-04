@@ -70,22 +70,13 @@ extern "C" {
 #define BMS_THERM9_ID			139
 
 
-
-/*
-	 ==============================================================================
-						   ##### CAN2 RX MACROS #####
-	 ==============================================================================
-*/
-
-
-
 /* Functions' prototypes ------------------------------------------------------------------  */
 
 HAL_StatusTypeDef BMS_CAN_Init(BMS_TypeDef* bms);
 
-HAL_StatusTypeDef BMS_CAN_Add_Message(BMS_TypeDef* bms, uint32_t Id, uint8_t DLC, uint32_t period);
+HAL_StatusTypeDef BMS_CAN_AddMessage(BMS_TypeDef* bms, uint32_t Id, uint8_t DLC, uint32_t period);
 
-HAL_StatusTypeDef BMS_CAN_Add_PeripFrames(BMS_TypeDef* bms);
+HAL_StatusTypeDef BMS_CAN_AddPeripheralFrames(BMS_TypeDef* bms);
 
 void 			  BMS_CAN_Get_ADC_Data(uint8_t *data);
 
@@ -116,5 +107,9 @@ uint8_t 		  BMS_CAN_GetLSB(uint16_t value);
 HAL_StatusTypeDef BMS_CAN_ScallingParams(BMS_TypeDef* bms, uint8_t channel, float* value_f);
 
 void 			  HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif	/* INC_BMS_CAN_DRIVER_H_ */

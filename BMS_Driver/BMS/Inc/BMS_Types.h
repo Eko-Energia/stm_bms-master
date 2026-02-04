@@ -90,13 +90,12 @@ typedef enum{
   * @brief  BMS's ADC object type
   */
 typedef struct{
+	ADC_HandleTypeDef*   hadc;														/*<ADC  handle used in BMS's firmware | measuring data via ADC>*/
 
-	ADC_HandleTypeDef   *hadc;															/*< ADC  handle used in BMS's firmware | measuring data via ADC>*/
+	uint16_t 			 ADC_voltTempCurr[3];										/*<ADC's converted value (ready to send via CAN1) buff>*/
 
-	uint16_t 			ADC_voltTempCurr[3];											/*< ADC's converted value (ready to send via CAN1) buff>*/
-
-	ADC_ChannelsTypeDef cadc1;															/*< ADC1's Channels' configurations object>*/
-	ADC_BufferTypeDef	badc1;															/*< ADC1's Channels' converted value buffer>*/
+	ADC_ChannelsTypeDef  cadc1;														/*<ADC1's Channels' configurations object>*/
+	ADC_BufferTypeDef	 badc1;														/*<ADC1's Channels' converted value buffer>*/
 
 }ADC_BMSTypeDef;
 
@@ -105,12 +104,12 @@ typedef struct{
   */
 typedef struct{
 
-	CAN_HandleTypeDef    *bhcan1;														/*< CAN1 handle used in BMS's firmware | sending   data via CAN1>*/
-	CAN_HandleTypeDef    *bhcan2;														/*< CAN2 handle used in BMS's firmware | receiving data via CAN1>*/
+	CAN_HandleTypeDef*   bhcan1;													/*<CAN1 handle used in BMS's firmware | sending   data via CAN1>*/
+	CAN_HandleTypeDef*   bhcan2;													/*<CAN2 handle used in BMS's firmware | receiving data via CAN2>*/
 
-	CAN_ScheduledMsgList CAN1_Buff;														/*< CAN1 frames buffer>*/
+	CAN_ScheduledMsgList CAN1_Buff;													/*<CAN1 frames buffer>*/
 
-	uint8_t 			 CAN2_temperatureCells[7][9];									/*< CAN2's received value (ready to send them via CAN1) buff>*/
+	uint8_t 			 CAN2_temperatureCells[7][9];								/*<CAN2's received value (ready to send via CAN1) buff>*/
 
 }CAN_BMSTypeDef;
 

@@ -32,6 +32,8 @@ extern "C" {
 
 
 /* Functions' prototypes ---------------------------------------------------------------------  */
+HAL_StatusTypeDef BMS_ADC_Init(BMS_TypeDef* bms);
+
 HAL_StatusTypeDef BMS_ADC_ReadValues(BMS_TypeDef* bms);
 
 HAL_StatusTypeDef BMS_ADC_Read_Voltage(BMS_TypeDef* bms);
@@ -44,5 +46,9 @@ float BMS_ADC_NTC_calibrateTemperature(float measured);
 
 float BMS_ADC_NTC_GetTemperature(float Rt);
 
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* INC_BMS_ADC_DRIVER_H_ */

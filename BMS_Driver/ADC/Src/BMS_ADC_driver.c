@@ -16,6 +16,17 @@
 
 #include "BMS_ADC_driver.h"
 
+HAL_StatusTypeDef BMS_ADC_Init(BMS_TypeDef* bms){
+
+
+	// Init ADC
+	if(ADC_Init(bms->bmsADC.hadc, &bms->bmsADC.badc1, &bms->bmsADC.cadc1) != HAL_OK){
+		return HAL_ERROR;
+	}
+
+	return HAL_OK;
+}
+
 
 HAL_StatusTypeDef BMS_ADC_ReadValues(BMS_TypeDef* bms){
 
@@ -28,7 +39,6 @@ HAL_StatusTypeDef BMS_ADC_ReadValues(BMS_TypeDef* bms){
 	if(BMS_ADC_Read_Temperature(bms) != HAL_OK){
 		return HAL_ERROR;
 	}
-
 
 	// reading current
 	if(BMS_ADC_Read_Current(bms) != HAL_OK){
@@ -45,11 +55,11 @@ HAL_StatusTypeDef BMS_ADC_Read_Voltage(BMS_TypeDef* bms){
 
 	// reading channel's value
 	if(ADC_ReadChannel(bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, ADC_VOLTAGE_CH, &voltage_b) != HAL_OK){
-		Error_Handler();
+		return HAL_ERROR;
 	}
 
-	// reading voltage on pin
-	if(ADC_GetValue(bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, VCC_SUPPLY_VOLTAGE, ADC_VOLTAGE_CH, &voltage_f) != HAL_OK){
+	// calculating real value of voltage
+	if(ADC_GetValue(bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, VCC_SUPPLY_VOLTAGE, ADC_CHANNEL_12, &voltage_f) != HAL_OK){
 		return HAL_ERROR;
 	}
 
@@ -112,6 +122,7 @@ HAL_StatusTypeDef BMS_ADC_Read_Current(BMS_TypeDef* bms){
 		return HAL_ERROR;
 	}
 
+	// Reserved for ADC current measurement tests (no active test code here).
 	// calculating real value of current
 	current_f = ((float)current_b - 2108.0f)/4.0f;
 

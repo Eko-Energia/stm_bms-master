@@ -43,10 +43,16 @@ HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_Han
 
 	//Init of NRF905
 	if(BMS_NRF905_Init(bms) != HAL_OK){
+    return HAL_ERROR;
+  }
+    
+	// Launching CAN1 and CAN2
+	if(BMS_CAN_Init(bms) != HAL_OK){
 		return HAL_ERROR;
 	}
 
-	if(BMS_Start_Peripherals(bms) != HAL_OK){
+	// Init ADC
+	if(BMS_ADC_Init(bms) != HAL_OK){
 		return HAL_ERROR;
 	}
 
@@ -62,8 +68,6 @@ HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms){
 		if(BMS_Start_Peripherals(bms) != HAL_OK){
 			return HAL_ERROR;
 		}
-
-
 
 		bms->prevStatus = BMS_NORMAL;
 	}
@@ -86,7 +90,7 @@ HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms){
 }
 
 
-HAL_StatusTypeDef BMS_Mode_Error(BMS_TypeDef* bms){
+void BMS_Mode_Change(BMS_TypeDef* bms, BMS_StatusTypeDef_e status){
 
 	// checking if change of mode occurred
 	if(bms->prevStatus != BMS_Error){
@@ -96,12 +100,12 @@ HAL_StatusTypeDef BMS_Mode_Error(BMS_TypeDef* bms){
 			return HAL_ERROR;
 		}
 
-		// save status, to prevent from multiple stopping peripherals
-		bms->prevStatus = BMS_Error;
-	}
+	// saving previous status
+	bms->prevStatus = bms->status;
 
+	// overwriting current BMS's status
+	bms->status = status;
 
-	return HAL_OK;
 }
 
 HAL_StatusTypeDef BMS_Log_Data(BMS_TypeDef* bms){
@@ -109,6 +113,7 @@ HAL_StatusTypeDef BMS_Log_Data(BMS_TypeDef* bms){
 
 	return HAL_OK;
 }
+
 
 HAL_StatusTypeDef BMS_Start_Peripherals(BMS_TypeDef* bms){
 
@@ -190,10 +195,6 @@ HAL_StatusTypeDef BMS_Stop_Peripherals(BMS_TypeDef* bms){
 	 ==============================================================================
 */
 
-	// Stopping CAN1 peripheral workflow for BMS in Standby or Error Mode
-	if(HAL_CAN_Stop(bms->bmsCAN.bhcan1) != HAL_OK){
-		return HAL_ERROR;
-	}
 
 	// Stopping CAN2 peripheral workflow for BMS in Standby or Error Mode
 	if(HAL_CAN_Stop(bms->bmsCAN.bhcan2) != HAL_OK){
@@ -219,60 +220,43 @@ HAL_StatusTypeDef BMS_Stop_Peripherals(BMS_TypeDef* bms){
 	return HAL_OK;
 }
 
-HAL_StatusTypeDef BMS_Status_Change(BMS_TypeDef* bms,BMS_StatusTypeDef_e status){
-
-	// check if given status is correct
-	if(status != BMS_NORMAL && status != BMS_Error){
-		return HAL_ERROR;
-	}
-
-	// saving previous status
-	bms->prevStatus = bms->status;
-
-	// overwriting current status
-	bms->status = status;
-
-	return HAL_OK;
-}
-
-void BMS_LED_Blink(BMS_TypeDef* bms){
-
-	// Universal variables
-	static uint32_t now;
-	now = HAL_GetTick() - 1;
+void BMS_Mode_LEDBlink(BMS_TypeDef* bms){
 
 
-	if(now - lastTick - 1 >= BMS_LED_PERIOD){
+	// init variable which stores current tick
+	uint32_t now = HAL_GetTick();
 
-		// state machine
+	// checking if correct ammout of time passed to Toggle LED state
+
+	if(now - lastTick >= 500){
+
 		switch(bms->status){
-			case BMS_NORMAL:
 
-				// in normal state blink green LED and turn off red led
+			// executing blinking for normal BMS's state
+			case BMS_NORMAL:
+				// Toggling GREEN LED
 				HAL_GPIO_TogglePin(GREEN_LD_GPIO_Port, GREEN_LD_Pin);
+
+				// Turning off RED lED
 				HAL_GPIO_WritePin(RED_LD_GPIO_Port, RED_LD_Pin, GPIO_PIN_RESET);
 
-
 				break;
+
+			// executing blinking for error BMS's state
 			case BMS_Error:
 
-				// in error state blink red LED and turn off green led
-				HAL_GPIO_WritePin(GREEN_LD_GPIO_Port, GREEN_LD_Pin, GPIO_PIN_RESET);
+				// Toggling RED LED
 				HAL_GPIO_TogglePin(RED_LD_GPIO_Port, RED_LD_Pin);
 
-
-
-				break;
-			default:
-
-				// returning error in case of wrong state
-				return;
+				// Turning off GREEN lED
+				HAL_GPIO_WritePin(GREEN_LD_GPIO_Port, GREEN_LD_Pin, GPIO_PIN_RESET);
 
 				break;
 		}
 
-
-		// overwrite last tick
+		// updating tick
 		lastTick = now;
+
 	}
+
 }
