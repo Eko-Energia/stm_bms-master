@@ -1,6 +1,6 @@
 /**
   ******************************************************************************
-  * @file    BMS_ADC_driver.h.h
+  * @file    BMS_ADC_driver.h
   * @author  Bartosz Rychlicki
 
   * @Title   Firmware for BMS Master PCB board's ADCs

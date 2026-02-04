@@ -63,6 +63,8 @@ HAL_StatusTypeDef BMS_ADC_Read_Voltage(BMS_TypeDef* bms){
 		return HAL_ERROR;
 	}
 
+	// Calculating voltage before voltage divider
+	voltage_f *= 28.362637362637362637362637362637f;
 
 	// scaling real value with factor and offset
 	if(BMS_CAN_ScallingParams(bms, ADC_VOLTAGE_CH, &voltage_f) != HAL_OK){
@@ -92,10 +94,10 @@ HAL_StatusTypeDef BMS_ADC_Read_Temperature(BMS_TypeDef* bms){
 	}
 
 	// calculating resistance
-	Rt = 1000/voltage_f * (VCC_SUPPLY_VOLTAGE - voltage_f);
+	Rt = 12456 / voltage_f * (3.218f - voltage_f);
 
 	// Calculating and calibrating temperature
-	temperature_f = BMS_ADC_NTC_calibrateTemperature(BMS_ADC_NTC_GetTemperature(Rt));
+	temperature_f = BMS_ADC_NTC_calibrateTemperature(BMS_ADC_NTC_GetTemperature(Rt) + 1.4f);
 
 	// security check if calculated temperature exceeds calculations range
 	if(temperature_f > 100 || temperature_f < 0){
@@ -103,7 +105,7 @@ HAL_StatusTypeDef BMS_ADC_Read_Temperature(BMS_TypeDef* bms){
 	}
 
 	// converting real value of temperature with factor and offset to achieve type of value, which is ready to be sent via CAN1
-	if(BMS_CAN_ScallingParams(bms, ADC_TEMP_CH, temperature_f) != HAL_OK){
+	if(BMS_CAN_ScallingParams(bms, ADC_TEMP_CH, &temperature_f) != HAL_OK){
 		return HAL_ERROR;
 	}
 
@@ -125,7 +127,7 @@ HAL_StatusTypeDef BMS_ADC_Read_Current(BMS_TypeDef* bms){
 	current_f = ((float)current_b - 2108.0f)/4.0f;
 
 	// converting real value into value, ready to be send via CAN1
-	if(BMS_CAN_ScallingParams(bms, ADC_CURRENT_CH, current_f) != HAL_OK){
+	if(BMS_CAN_ScallingParams(bms, ADC_CURRENT_CH, &current_f) != HAL_OK){
 		return HAL_ERROR;
 	}
 
@@ -133,13 +135,14 @@ HAL_StatusTypeDef BMS_ADC_Read_Current(BMS_TypeDef* bms){
 }
 
 float BMS_ADC_NTC_calibrateTemperature(float measured) {
-    // Punkty kalibracyjne (dostosuj po swoich pomiarach)
-    float T1 = 25.0f;  // rzeczywista temp.
-    float M1 = 28.0f;  // zmierzona
+
+    // calibrating points
+    float T1 = 25.0f;  // real temperature
+    float M1 = 28.0f;  // measured value
     float T2 = 36.6f;
     float M2 = 39.2f;
 
-    // interpolacja liniowa
+    // linear interpolation
     return T1 + (measured - M1) * (T2 - T1) / (M2 - M1);
 }
 

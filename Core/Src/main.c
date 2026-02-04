@@ -118,7 +118,9 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
+  // reading current tick of firmware
   lastTick = HAL_GetTick();
+
   while (1)
   {
 	  // Blinking LED according to current BMS's state
@@ -227,6 +229,8 @@ static void MX_NVIC_Init(void)
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
+
+
 	BMS_Mode_Error(&bms);
   /* User can add his own implementation to report the HAL error return state */
 
