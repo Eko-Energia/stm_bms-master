@@ -43,8 +43,8 @@ HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_Han
 
 	//Init of NRF905
 	if(BMS_NRF905_Init(bms) != HAL_OK){
-    return HAL_ERROR;
-  }
+        return HAL_ERROR;
+    }
     
 	// Launching CAN1 and CAN2
 	if(BMS_CAN_Init(bms) != HAL_OK){
@@ -89,8 +89,24 @@ HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms){
 	return HAL_OK;
 }
 
+HAL_StatusTypeDef BMS_Mode_Error(BMS_TypeDef* bms){
 
-void BMS_Mode_Change(BMS_TypeDef* bms, BMS_StatusTypeDef_e status){
+	if(bms->prevStatus != BMS_Error){
+
+		// Stopping peripherals
+		if(BMS_Stop_Peripherals(bms) != HAL_OK){
+			return HAL_ERROR;
+		}
+
+		// saving status
+		bms->prevStatus = BMS_Error;
+	}
+
+
+	return HAL_OK;
+}
+
+HAL_StatusTypeDef BMS_Mode_Change(BMS_TypeDef* bms, BMS_StatusTypeDef_e status){
 
 	// checking if change of mode occurred
 	if(bms->prevStatus != BMS_Error){
@@ -100,13 +116,17 @@ void BMS_Mode_Change(BMS_TypeDef* bms, BMS_StatusTypeDef_e status){
 			return HAL_ERROR;
 		}
 
+	}
+
 	// saving previous status
 	bms->prevStatus = bms->status;
 
 	// overwriting current BMS's status
 	bms->status = status;
 
+	return HAL_OK;
 }
+
 
 HAL_StatusTypeDef BMS_Log_Data(BMS_TypeDef* bms){
 
@@ -224,7 +244,8 @@ void BMS_Mode_LEDBlink(BMS_TypeDef* bms){
 
 
 	// init variable which stores current tick
-	uint32_t now = HAL_GetTick();
+	static uint32_t now;
+	now = HAL_GetTick();
 
 	// checking if correct ammout of time passed to Toggle LED state
 
@@ -252,11 +273,12 @@ void BMS_Mode_LEDBlink(BMS_TypeDef* bms){
 				HAL_GPIO_WritePin(GREEN_LD_GPIO_Port, GREEN_LD_Pin, GPIO_PIN_RESET);
 
 				break;
+			default:
+				break;
 		}
 
 		// updating tick
 		lastTick = now;
 
 	}
-
 }

@@ -36,7 +36,7 @@ HAL_StatusTypeDef BMS_CAN_Init(BMS_TypeDef* bms){
 	CAN_Init(bms->bmsCAN.bhcan1);
 
 	// Adding frames co-related to peripherals data
-	if(BMS_CAN_Add_PeripFrames(bms) != HAL_OK){
+	if(BMS_CAN_AddPeripheralFrames(bms) != HAL_OK){
 		return HAL_ERROR;
 	}
 
