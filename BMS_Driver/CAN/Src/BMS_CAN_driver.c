@@ -24,11 +24,11 @@ extern BMS_TypeDef bms;
 HAL_StatusTypeDef BMS_CAN_Init(BMS_TypeDef* bms){
 
 	// Init of CAN1 and CAN2 to start communication via these buses
-	CAN_Init(&bms->bmsCAN.bhcan1);
-	CAN_Init(&bms->bmsCAN.bhcan2);
+	CAN_Init(bms->bmsCAN.bhcan1);
+	CAN_Init(bms->bmsCAN.bhcan2);
 
 	// launching interrupts for CAN2
-	if(HAL_CAN_ActivateNotification(&bms->bmsCAN.bhcan2, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK){
+	if(HAL_CAN_ActivateNotification(bms->bmsCAN.bhcan2, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK){
 		return HAL_ERROR;
 	}
 
@@ -68,8 +68,6 @@ HAL_StatusTypeDef BMS_CAN_Add_Message(BMS_TypeDef* bms, uint32_t Id, uint8_t DLC
 
 	// assigning correct return of data function to correct msg
 	switch(Id){
-	case BMS_NODE_ID:
-		msg.GetData = BMS_CAN_Get_Node_Data;
 		break;
 	case BMS_VOLTCURTEMP_ID:
 		msg.GetData = BMS_CAN_Get_ADC_Data;
@@ -149,11 +147,6 @@ void BMS_CAN_Get_ADC_Data(uint8_t *data){
 	data[5] = BMS_CAN_GetMSB(bms.bmsADC.ADC_voltTempCurr[1]);  // MSB
 }
 
-void BMS_CAN_Get_Node_Data(uint8_t *data){
-
-
-}
-
 void BMS_CAN_PackCAN2Temps(uint8_t* data, uint8_t thermId){
 	for(int i = 0; i < 7; ++i){
 		data[i] = (uint8_t)bms.bmsCAN.CAN2_temperatureCells[i][thermId];
@@ -171,6 +164,7 @@ void BMS_CAN_Get_CAN2_Data_Therm7(uint8_t *data){ BMS_CAN_PackCAN2Temps(data, 6)
 void BMS_CAN_Get_CAN2_Data_Therm8(uint8_t *data){ BMS_CAN_PackCAN2Temps(data, 7);}
 void BMS_CAN_Get_CAN2_Data_Therm9(uint8_t *data){ BMS_CAN_PackCAN2Temps(data, 8);}
 
+
 uint8_t BMS_CAN_GetMSB(uint16_t value){
 	return (uint8_t)(value >> 8);
 }
@@ -178,7 +172,6 @@ uint8_t BMS_CAN_GetMSB(uint16_t value){
 uint8_t BMS_CAN_GetLSB(uint16_t value){
 	return (uint8_t)value;
 }
-
 
 
 HAL_StatusTypeDef BMS_CAN_ScallingParams(BMS_TypeDef* bms, uint8_t channel, float* value_f){

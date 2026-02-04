@@ -24,7 +24,7 @@ HAL_StatusTypeDef BMS_ADC_ReadValues(BMS_TypeDef* bms){
 		return HAL_ERROR;
 	}
 
-	/*// reading temperature | Needs tests when physical thermistor is connected
+	// reading temperature | Needs tests when physical thermistor is connected
 	if(BMS_ADC_Read_Temperature(bms) != HAL_OK){
 		return HAL_ERROR;
 	}
@@ -33,7 +33,7 @@ HAL_StatusTypeDef BMS_ADC_ReadValues(BMS_TypeDef* bms){
 	// reading current
 	if(BMS_ADC_Read_Current(bms) != HAL_OK){
 		return HAL_ERROR;
-	}*/
+	}
 
 	return HAL_OK;
 }
@@ -44,19 +44,17 @@ HAL_StatusTypeDef BMS_ADC_Read_Voltage(BMS_TypeDef* bms){
 	float voltage_f = 0.0f; // real type of voltage
 
 	// reading channel's value
-	if(ADC_ReadChannel(&bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, ADC_VOLTAGE_CH, &voltage_b) != HAL_OK){
+	if(ADC_ReadChannel(bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, ADC_VOLTAGE_CH, &voltage_b) != HAL_OK){
 		Error_Handler();
 	}
 
-	// calculating real value of voltage
-	voltage_f = ((3.619082048711e-10f * voltage_b * voltage_b * voltage_b)
-							+ (-2.900539105612e-06f * voltage_b * voltage_b)
-							+ (8.619777110039e-03f   * voltage_b)
-							+ (-6.578297753298f)) * 28.362637362637362637362637362637f;
+	// reading voltage on pin
+	if(ADC_GetValue(bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, VCC_SUPPLY_VOLTAGE, ADC_VOLTAGE_CH, &voltage_f) != HAL_OK){
+		return HAL_ERROR;
+	}
 
-	float voltageTempDebug = 0.0f;
-	ADC_GetValue(&bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, 3.3f, ADC_CHANNEL_12, &voltageTempDebug);
-	float calculatedValueTest = voltageTempDebug * 28.362637362637362637362637362637f;
+	// Calculating voltage before voltage divider
+	voltage_f *= 28.362637362637362637362637362637f;
 
 	// scaling real value with factor and offset
 	if(BMS_CAN_ScallingParams(bms, ADC_VOLTAGE_CH, &voltage_f) != HAL_OK){
@@ -76,12 +74,12 @@ HAL_StatusTypeDef BMS_ADC_Read_Temperature(BMS_TypeDef* bms){
 
 
 	// reading value
-	if(ADC_ReadChannel(&bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, ADC_TEMP_CH, &voltage_b) != HAL_OK){
+	if(ADC_ReadChannel(bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, ADC_TEMP_CH, &voltage_b) != HAL_OK){
 		return HAL_ERROR;
 	}
 
 	// calculating voltage before voltage divider
-	if(ADC_GetValue(&bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, VCC_SUPPLY_VOLTAGE, ADC_TEMP_CH, &voltage_f) != HAL_OK){
+	if(ADC_GetValue(bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, VCC_SUPPLY_VOLTAGE, ADC_TEMP_CH, &voltage_f) != HAL_OK){
 		return HAL_ERROR;
 	}
 
@@ -110,7 +108,7 @@ HAL_StatusTypeDef BMS_ADC_Read_Current(BMS_TypeDef* bms){
 	float current_f    = 0.0f;  // real type of current
 
 	// reading channel's value
-	if(ADC_ReadChannel(&bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, ADC_CURRENT_CH, &current_b) != HAL_OK){
+	if(ADC_ReadChannel(bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, ADC_CURRENT_CH, &current_b) != HAL_OK){
 		return HAL_ERROR;
 	}
 

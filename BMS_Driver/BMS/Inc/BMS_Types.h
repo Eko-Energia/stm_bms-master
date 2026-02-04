@@ -79,7 +79,7 @@ typedef enum{
 
 	BMS_NRF905_AMPLIFIER_SHUTDOWN = 0,													/*< BMS's NRF905's amplifier shutdown mode>*/
 	BMS_NRF905_AMPLIFIER_LOWPWR,														/*< BMS's NRF905's amplifier low PWR mode>*/
-	BMS_NRF905_AMPLIFIER_MEDIUMPWR,														/*< BMS's NRF905's amplifier medium PWR mode>*/
+	BMS_NRF905_AMPLIFIER_MEDIUMPWR, 													/*< BMS's NRF905's amplifier medium PWR mode>*/
 	BMS_NRF905_AMPLIFIER_HIGHPWR														/*< BMS's NRF905's amplifier high PWR mode>*/
 
 }NRF905_AmplifierStatusTypeDef_e;
@@ -91,7 +91,7 @@ typedef enum{
   */
 typedef struct{
 
-	ADC_HandleTypeDef   hadc;															/*< ADC  handle used in BMS's firmware | measuring data via ADC>*/
+	ADC_HandleTypeDef   *hadc;															/*< ADC  handle used in BMS's firmware | measuring data via ADC>*/
 
 	uint16_t 			ADC_voltTempCurr[3];											/*< ADC's converted value (ready to send via CAN1) buff>*/
 
@@ -105,8 +105,8 @@ typedef struct{
   */
 typedef struct{
 
-	CAN_HandleTypeDef    bhcan1;														/*< CAN1 handle used in BMS's firmware | sending   data via CAN1>*/
-	CAN_HandleTypeDef    bhcan2;														/*< CAN2 handle used in BMS's firmware | receiving data via CAN1>*/
+	CAN_HandleTypeDef    *bhcan1;														/*< CAN1 handle used in BMS's firmware | sending   data via CAN1>*/
+	CAN_HandleTypeDef    *bhcan2;														/*< CAN2 handle used in BMS's firmware | receiving data via CAN1>*/
 
 	CAN_ScheduledMsgList CAN1_Buff;														/*< CAN1 frames buffer>*/
 
@@ -180,7 +180,7 @@ typedef struct{
 
 	uint8_t  XOF         : 3;															/*<Crystal oscillator frequency (default: 100):
 																							- 000 - 4  MHz
-																							- 001 - 8  Mhz
+																							- 001 - 8  MHz
 																							- 010 - 12 MHz
 																							- 011 - 16 MHz
 																							- 100 - 20 MHz									>*/
@@ -221,6 +221,9 @@ typedef struct{
   * @brief  NRF905 object typedef
   */
 typedef struct{
+	SPI_HandleTypeDef   		  *hspi1;													/*< SPI  handle used in BMS's firmware | sending   data via NRF905>*/
+
+
 	NRF905_AmplifierTypeDef       amplifier;									    		/*< NRF905's amplifier object>*/
 	NRF905_SPITypeDef		      spi;														/*< NRF905's SPI object>*/
 	NRF905_StatusTypeDef_e     	  status;										    		/*< NRF905's status>*/
@@ -239,17 +242,26 @@ typedef struct{
   */
 typedef struct{
 
+	UART_HandleTypeDef  *huart1;															/*< UART handle used in BMS's firmware | logging   data via UART1>*/
 
-	BMS_StatusTypeDef_e  status;															/*< Current BMS status>*/
-	BMS_StatusTypeDef_e  prevStatus;														/*< Previous BMS status in case status change occurred>*/
+	char* loggerMessage;																	/*< Error logger's message>*/
+
+}BMS_ErrorLoggerTypeDef;
+
+/**
+  * @brief  BMS object type
+  */
+typedef struct{
 
 
-	UART_HandleTypeDef  huart1;																/*< UART handle used in BMS's firmware | logging   data via UART1>*/
-	SPI_HandleTypeDef   hspi1;																/*< SPI  handle used in BMS's firmware | sending   data via NRF905>*/
+	BMS_StatusTypeDef_e    status;															/*< Current BMS status>*/
+	BMS_StatusTypeDef_e    prevStatus;														/*< Previous BMS status in case status change occurred>*/
 
-	CAN_BMSTypeDef 		bmsCAN;																/*< BMS's CAN 	 custom typedef object>*/
-	ADC_BMSTypeDef 		bmsADC;																/*< BMS's ADC 	 custom typedef object>*/
-	NRF905_TypeDef      bmsNRF905;															/*< BMS's NRF905 custom typedef object>*/
+	BMS_ErrorLoggerTypeDef errorLogger;														/*< Error logger typedef's object>*/
+
+	CAN_BMSTypeDef 		   bmsCAN;															/*< BMS's CAN 	 custom typedef object>*/
+	ADC_BMSTypeDef 		   bmsADC;															/*< BMS's ADC 	 custom typedef object>*/
+	NRF905_TypeDef         bmsNRF905;														/*< BMS's NRF905 custom typedef object>*/
 
 }BMS_TypeDef;
 
@@ -261,14 +273,15 @@ typedef struct{
 /*
  *  @brief ADC Channels' numbers macros definitions
  * */
-#define ADC_VOLTAGE_CH 12																	/*<12th channel of ADC1>*/
-#define ADC_CURRENT_CH 11																	/*<11th channel of ADC1>*/
-#define ADC_TEMP_CH    10																	/*<10th channel of ADC1>*/
+#define ADC_VOLTAGE_CH 		(12)																/*<12th channel of ADC1>*/
+#define ADC_CURRENT_CH 		(11)																/*<11th channel of ADC1>*/
+#define ADC_TEMP_CH    		10																/*<10th channel of ADC1>*/
 
 // STM32F105
 
-#define BMS_VCC_SUPPLY      87.0f															/*<MAX DC Supply Voltage of BMS Master PCB>*/
-#define VCC_SUPPLY_VOLTAGE  3.3f															/*<MAX DC Supply Voltage for STM32f105>*/
+#define BMS_VCC_SUPPLY      (87.0f)															/*<MAX DC Supply Voltage of BMS Master PCB>*/
+#define VCC_SUPPLY_VOLTAGE  (3.3f)															/*<MAX DC Supply Voltage for STM32f105>*/
+
 
 // NRF905
 
@@ -276,14 +289,14 @@ typedef struct{
   * @brief  BMS's NRF905's SPI selected commands' macros definitions
   * @note   NRF905_CMD
   */
-#define NRF905_CMD_WC  	0x00,																/*<Write configuration register>*/
-#define	NRF905_CMD_WR  	0x10,																/*<Read  configuration register>*/
-#define	NRF905_CMD_WTP 	0x20,																/*<Write TX payload>*/
-#define	NRF905_CMD_RTP  0x21,																/*<Read  TX payload>*/
-#define	NRF905_CMD_WTA  0x22,																/*<Write TX address>*/
-#define	NRF905_CMD_RTA  0x23,																/*<Read  TX address>*/
-#define	NRF905_CMD_RRP  0x24,																/*<Read  RX payload>*/
-#define	NRF905_CMD_CC   0x80																/*<Special command for fast setting CH_NO, HFREQ_PLL, PA_PWR in CONFIGURATION REGISTER>*/
+#define NRF905_CMD_WC  		(0x00)															/*<Write configuration register>*/
+#define	NRF905_CMD_WR  		(0x10)															/*<Read  configuration register>*/
+#define	NRF905_CMD_WTP 		(0x20)															/*<Write TX payload>*/
+#define	NRF905_CMD_RTP  	(0x21)															/*<Read  TX payload>*/
+#define	NRF905_CMD_WTA  	(0x22)															/*<Write TX address>*/
+#define	NRF905_CMD_RTA  	(0x23)															/*<Read  TX address>*/
+#define	NRF905_CMD_RRP  	(0x24)															/*<Read  RX payload>*/
+#define	NRF905_CMD_CC   	(0x80)															/*<Special command for fast setting CH_NO, HFREQ_PLL, PA_PWR in CONFIGURATION REGISTER>*/
 
 
 #endif /* INC_BMS_TYPES_H_ */

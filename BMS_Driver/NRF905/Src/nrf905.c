@@ -17,14 +17,15 @@
   */
 
 /* Includes ----------------------------------------------------------------------------------  */
-#include "BMS_Types.h"
+#include "nrf905.h"
+#include "BMS_CAN_driver.h"
 
 /* Variables ----------------------------------------------------------------------------------  */
-extern BMS_TypeDef bms;
+extern BMS_TypeDef bms;						/*<extracted BMS typedef's object, used during fetching payload>*/
 
 /* Functions' bodies -------------------------------------------------------------------------  */
-// NRF905 power modes
 
+// NRF905 power modes
 
 /**
   * @brief  Function that provides NRF905 enters given mode
@@ -50,20 +51,109 @@ HAL_StatusTypeDef BMS_NRF905_ChangeMode(BMS_TypeDef* bms, NRF905_StatusTypeDef_e
 
 
 // NRF905 operations
-void NRF905_Init(void);
+HAL_SPI_StateTypeDef BMS_NRF905_Init(BMS_TypeDef* bms){
 
-void NRF905_RF_Config(void);
+	// Powering down SPI controller as a default mode
+	if(BMS_NRF905_SPI_ChangeMode(bms, BMS_NRF905_SPI_PWRDOWN) != HAL_OK){
+		return HAL_ERROR;
+	}
 
-void NRF905_TX_Payload(uint8_t* data);
+	// Turning on standby mode to enable SPI programming during standby mode
+	if(BMS_NRF905_SPI_ChangeMode(bms, BMS_NRF905_SPI_STANDBY) != HAL_OK){
+		return HAL_OK;
+	}
 
-void NRF905_Tx_Address(uint8_t* addr);
+	// Send RF configuration to NRF905
+	if(BMS_NRF905_WriteReg(bms, NRF905_CMD_WC, (uint8_t*)bms->bmsNRF905.nrfConfig.GetRFConfig, 10) != HAL_OK){
+		return HAL_ERROR;
+	}
 
-void NRF905_Send(uint32_t Id, uint8_t* data, uint8_t DLC);
+	// Setting SPI controller and amplifier to Normal mode
+	if(BMS_NRF905_Set_NormalMode(bms) != HAL_OK){
+		return HAL_ERROR;
+	}
+
+
+	return HAL_OK;
+}
+
+HAL_StatusTypeDef BMS_NRF905_Mode_Normal(BMS_TypeDef* bms){
+
+	// sending all data via NRF905
+	for(int i = 0; i < bms->bmsCAN.CAN1_Buff.size; ++i){
+
+		// Sending current frame with its ID
+		if(BMS_NRF905_Transmit(bms, &bms->bmsCAN.CAN1_Buff.list[i].header.DLC) != HAL_OK){
+			return HAL_ERROR;
+		}
+
+	}
+
+	return HAL_OK;
+}
+
+HAL_StatusTypeDef BMS_NRF905_Set_NormalMode(BMS_TypeDef* bms){
+
+	// Turning medium PWR mode for NRF905 amplifier
+	BMS_NRF905_Amplifier_ChangeMode(bms, BMS_NRF905_AMPLIFIER_MEDIUMPWR);
+
+	// Enabling ShockBurst
+	if(BMS_NRF905_SPI_ChangeMode(bms, BMS_NRF905_SPI_SHOCKBURST_RX) != HAL_OK){
+		return HAL_ERROR;
+	}
+
+
+	return HAL_OK;
+}
+
+
+HAL_StatusTypeDef BMS_NRF905_Set_ErrorMode(BMS_TypeDef* bms){
+
+	// Shutting down NRF905 amplifier
+	BMS_NRF905_Amplifier_ChangeMode(bms, BMS_NRF905_AMPLIFIER_SHUTDOWN);
+
+	// EnPowering down SPI controller
+	if(BMS_NRF905_SPI_ChangeMode(bms, BMS_NRF905_SPI_PWRDOWN) != HAL_OK){
+		return HAL_ERROR;
+	}
+
+
+	return HAL_OK;
+}
+
+HAL_StatusTypeDef BMS_NRF905_Transmit(BMS_TypeDef* bms, uint32_t* id){
+
+	uint8_t* addr = 0;		// init of variable which stores 4 bytes od address to be sent via SPI
+	uint8_t* data = 0;		// initialization of variable, which stores 32-bits of payload (according to datasheet)
+
+	// Extracting 32-bit addr into 4-bytes of addr
+	if(BMS_NRF905_ExtractAddr(bms, (uint8_t*)id, addr) != HAL_OK){
+		return HAL_ERROR;
+	}
+
+	// Reading payload
+	if(BMS_NRF905_SelectPayload(bms, id, data) != HAL_OK){
+		return HAL_ERROR;
+	}
+
+	// Sending address frame
+	if(BMS_NRF905_WriteReg(bms, NRF905_CMD_WTA, addr, NRF905_ADDR_SIZE) != HAL_OK){
+		return HAL_ERROR;
+	}
+
+	// Sending payload
+	if(BMS_NRF905_WriteReg(bms, NRF905_CMD_WTP, data, NRF905_PAYLOAD_SIZE) != HAL_OK){
+		return HAL_ERROR;
+	}
+
+	return HAL_OK;
+}
+
 
 /*
  * RF function, which formats and fetch data to configure NRF905
 */
-void NRF905_GetConfigData(uint8_t* data){
+void BMS_NRF905_GetConfigData(uint8_t* data){
 
 	// setting byte0 with 8 bits of CH_NO
 	data[0] = ((bms.bmsNRF905.nrfConfig.CH_NO)     & 0xF);
@@ -107,8 +197,38 @@ void NRF905_GetConfigData(uint8_t* data){
 
 }
 
-// NRF905's SPI operations
+HAL_StatusTypeDef BMS_NRF905_SelectPayload(BMS_TypeDef* bms, uint32_t* id, uint8_t* payload){
 
+	// reading data co-related with given id
+	if(*id == BMS_VOLTCURTEMP_ID){
+
+		// fetching data co-related with ADC
+		BMS_CAN_Get_ADC_Data(payload);
+
+	}else{
+
+		// fetching data co-related with CAN2
+		BMS_CAN_PackCAN2Temps(payload, (*id - 10 * (*id) - 200));
+
+	}
+
+
+	return HAL_OK;
+}
+
+HAL_StatusTypeDef BMS_NRF905_ExtractAddr(BMS_TypeDef* bms, uint8_t* selectedAddr, uint8_t* targetAddr){
+
+	// extracting byte after byte from 32-bits variable to each byte of addr
+	targetAddr[3] = (uint8_t)(*selectedAddr >> NRF905_ADDR_MSB_pos );
+	targetAddr[2] = (uint8_t)(*selectedAddr >> NRF905_ADDR_NMSB_pos);
+	targetAddr[1] = (uint8_t)(*selectedAddr >> NRF905_ADDR_NLSB_pos);
+	targetAddr[0] = (uint8_t)(*selectedAddr >> NRF905_ADDR_LSB_pos );
+
+
+	return HAL_OK;
+}
+
+// NRF905's SPI operations
 
 /*
   * @brief  Function that provides NRF905's SPI controller enters given mode
@@ -177,7 +297,7 @@ HAL_StatusTypeDef BMS_NRF905_SPI_TransferReceive(BMS_TypeDef* bms, uint8_t* txBy
 	}
 
 	// Sending and receiving one byte of data
-	if(HAL_SPI_TransmitReceive(&bms->hspi1, txByte, rxByte, 1, HAL_MAX_DELAY) != HAL_OK){
+	if(HAL_SPI_TransmitReceive(bms->bmsNRF905.hspi1, txByte, rxByte, 1, HAL_MAX_DELAY) != HAL_OK){
 		return HAL_ERROR;
 	}
 
@@ -190,6 +310,7 @@ HAL_StatusTypeDef BMS_NRF905_SPI_TransferReceive(BMS_TypeDef* bms, uint8_t* txBy
 	return HAL_OK;
 }
 
+
 /**
   * @brief  Function that provides writing given data with its command to NRF905 module's register
   * @param  BMS_TypeDef* bms     - pointer to BMS object of type BMS_TypeDef, with SPI handle
@@ -200,10 +321,10 @@ HAL_StatusTypeDef BMS_NRF905_SPI_TransferReceive(BMS_TypeDef* bms, uint8_t* txBy
 */
 HAL_StatusTypeDef BMS_NRF905_WriteReg(BMS_TypeDef* bms, uint8_t cmd, uint8_t* txData, uint8_t len){
 
-	uint8_t* rxDummyByte; 	// init of dummy variable, function should send, but received data won't be needed in further operations
+	uint8_t rxDummyByte = 0xFF; 	// init of dummy variable, function should send, but received data won't be needed in further operations
 
 	// sending given command to NRF905 modules
-	if(BMS_NRF905_SPI_TransferReceive(bms, &cmd, rxDummyByte) != HAL_OK){
+	if(BMS_NRF905_SPI_TransferReceive(bms, &cmd, &rxDummyByte) != HAL_OK){
 		return HAL_ERROR;
 	}
 
@@ -218,6 +339,7 @@ HAL_StatusTypeDef BMS_NRF905_WriteReg(BMS_TypeDef* bms, uint8_t cmd, uint8_t* tx
 
 	return HAL_OK;
 }
+
 
 /**
   * @brief  Function that provides reading NRF905 module's register to data reference
@@ -239,7 +361,7 @@ HAL_StatusTypeDef BMS_NRF905_ReadReg(BMS_TypeDef* bms, uint8_t cmd, uint8_t* rxD
 
 	// reading register, byte after byte
 	for(int i = 0; i < len; ++i){
-		if(BMS_NRF905_SPI_TransferReceive(bms, &txDummyByte, rxData[i]) != HAL_OK){
+		if(BMS_NRF905_SPI_TransferReceive(bms, &txDummyByte, &rxData[i]) != HAL_OK){
 			return HAL_ERROR;
 		}
 	}
@@ -249,6 +371,8 @@ HAL_StatusTypeDef BMS_NRF905_ReadReg(BMS_TypeDef* bms, uint8_t cmd, uint8_t* rxD
 
 
 // NRF905's amplifier power modes
+
+
 /*
  * Logic for below function was implemented according to table from MAX2233 datasheet (and presented below)
  * ﹎﹎﹎﹎﹎﹎﹎﹎﹎﹎﹎﹎﹎﹎﹎﹎﹎﹎﹎﹎﹎﹎﹎﹎﹎﹎﹎﹎

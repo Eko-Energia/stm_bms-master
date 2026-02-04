@@ -22,11 +22,11 @@
 HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_HandleTypeDef* bhcan2, ADC_HandleTypeDef* hadc, SPI_HandleTypeDef* hspi, UART_HandleTypeDef* huart){
 
 	// assigning handle objects
-	bms->bmsADC.hadc   = *hadc;
-	bms->bmsCAN.bhcan1 = *bhcan1;
-	bms->bmsCAN.bhcan2 = *bhcan2;
-	bms->huart1		   = *huart;
-	bms->hspi1		   = *hspi;
+	bms->bmsADC.hadc        = hadc;
+	bms->bmsCAN.bhcan1      = bhcan1;
+	bms->bmsCAN.bhcan2      = bhcan2;
+	bms->errorLogger.huart1 = huart;
+	bms->bmsNRF905.hspi1    = hspi;
 
 	// setting default status (normal) for BMS
 	bms->status     = BMS_NORMAL;
@@ -37,6 +37,11 @@ HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_Han
 
 	// reseting array which stores cells' voltages, whose values are provided by CAN2
 	for(int i = 0; i< 7; ++i){ memset(bms->bmsCAN.CAN2_temperatureCells[i], 0, sizeof(bms->bmsCAN.CAN2_temperatureCells[i][0]));}
+
+	//Init of NRF905
+	if(BMS_NRF905_Init(bms) != HAL_OK){
+		return HAL_ERROR;
+	}
 
 	if(BMS_Start_Peripherals(bms) != HAL_OK){
 		return HAL_ERROR;
@@ -55,6 +60,8 @@ HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms){
 			return HAL_ERROR;
 		}
 
+
+
 		bms->prevStatus = BMS_NORMAL;
 	}
 
@@ -64,11 +71,13 @@ HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms){
 	}
 
 	// Send Data via CAN
-	CAN_HandleScheduled(&bms->bmsCAN.bhcan1, &bms->bmsCAN.CAN1_Buff);
+	CAN_HandleScheduled(bms->bmsCAN.bhcan1, &bms->bmsCAN.CAN1_Buff);
 
 
-	// Send Data via nrf905
-
+	// Launching sending data via nrf905
+	if(BMS_NRF905_Mode_Normal(bms) != HAL_OK){
+		return HAL_ERROR;
+	}
 
 	return HAL_OK;
 }
@@ -76,8 +85,17 @@ HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms){
 
 HAL_StatusTypeDef BMS_Mode_Error(BMS_TypeDef* bms){
 
-	// restrict amount of sent CAN frames, send only frame with error code
+	// checking if change of mode occurred
+	if(bms->prevStatus != BMS_Error){
 
+		// Stop peripherals
+		if(BMS_Stop_Peripherals(bms) != HAL_OK){
+			return HAL_ERROR;
+		}
+
+		// save status, to prevent from multiple stopping peripherals
+		bms->prevStatus = BMS_Error;
+	}
 
 
 	return HAL_OK;
@@ -97,12 +115,12 @@ HAL_StatusTypeDef BMS_Start_Peripherals(BMS_TypeDef* bms){
 	 ==============================================================================
 */
 	// Launching DMA for ADC
-	if(HAL_ADC_Start_DMA(&bms->bmsADC.hadc, bms->bmsADC.badc1.idma.BufferADC, ADC_BUFF_SIZE) != HAL_OK){
+	if(HAL_ADC_Start_DMA(bms->bmsADC.hadc, (uint32_t*)bms->bmsADC.badc1.idma.BufferADC, ADC_BUFF_SIZE) != HAL_OK){
 		return HAL_ERROR;
 	}
 
 	// Launching ADC for BMS
-	if(ADC_Init(&bms->bmsADC.hadc, &bms->bmsADC.badc1, &bms->bmsADC.cadc1) != HAL_OK){
+	if(ADC_Init(bms->bmsADC.hadc, &bms->bmsADC.badc1, &bms->bmsADC.cadc1) != HAL_OK){
 		return HAL_OK;
 	}
 
@@ -118,20 +136,18 @@ HAL_StatusTypeDef BMS_Start_Peripherals(BMS_TypeDef* bms){
 	}
 
 	// Checking if CAN1 is in sleep mode, if yes, then wake up CAN1
-	if(HAL_CAN_IsSleepActive(&bms->bmsCAN.bhcan1)){
-		if(HAL_CAN_WakeUp(&bms->bmsCAN.bhcan1) != HAL_OK){
+	if(HAL_CAN_IsSleepActive(bms->bmsCAN.bhcan1)){
+		if(HAL_CAN_WakeUp(bms->bmsCAN.bhcan1) != HAL_OK){
 			return HAL_ERROR;
 		}
 	}
 
 	// Checking if CAN2 is in sleep mode, if yes, then wake up CAN2
-	if(HAL_CAN_IsSleepActive(&bms->bmsCAN.bhcan2)){
-		if(HAL_CAN_WakeUp(&bms->bmsCAN.bhcan2) != HAL_OK){
+	if(HAL_CAN_IsSleepActive(bms->bmsCAN.bhcan2)){
+		if(HAL_CAN_WakeUp(bms->bmsCAN.bhcan2) != HAL_OK){
 			return HAL_ERROR;
 		}
 	}
-
-	// Restore CAN frames
 
 
 /*
@@ -139,11 +155,10 @@ HAL_StatusTypeDef BMS_Start_Peripherals(BMS_TypeDef* bms){
 						   ##### LAUNCHING NRF905 #####
 	 ==============================================================================
 */
-	// Init and start NRF905
-
-	// Init and start NRF905's SPI controller
-
-	// Init and start NRF905's amplifier (MAX2233)
+	// Setting normal mode for NRF905
+	if(BMS_NRF905_Set_NormalMode(bms) != HAL_OK){
+		return HAL_ERROR;
+	}
 
 	return HAL_OK;
 }
@@ -158,11 +173,11 @@ HAL_StatusTypeDef BMS_Stop_Peripherals(BMS_TypeDef* bms){
 */
 
 	// Stopping ADC peripheral workflow for BMS in Standby or Error Mode
-	if(HAL_ADC_Stop(&bms->bmsADC.hadc) != HAL_OK){
+	if(HAL_ADC_Stop(bms->bmsADC.hadc) != HAL_OK){
 		return HAL_ERROR;
 	}
 
-	if(HAL_ADC_Stop_DMA(&bms->bmsADC.hadc) !=  HAL_OK){
+	if(HAL_ADC_Stop_DMA(bms->bmsADC.hadc) !=  HAL_OK){
 		return HAL_OK;
 	}
 
@@ -173,17 +188,27 @@ HAL_StatusTypeDef BMS_Stop_Peripherals(BMS_TypeDef* bms){
 */
 
 	// Stopping CAN1 peripheral workflow for BMS in Standby or Error Mode
-	if(HAL_CAN_Stop(&bms->bmsCAN.bhcan1) != HAL_OK){
+	if(HAL_CAN_Stop(bms->bmsCAN.bhcan1) != HAL_OK){
 		return HAL_ERROR;
 	}
 
 	// Stopping CAN2 peripheral workflow for BMS in Standby or Error Mode
-	if(HAL_CAN_Stop(&bms->bmsCAN.bhcan2) != HAL_OK){
+	if(HAL_CAN_Stop(bms->bmsCAN.bhcan2) != HAL_OK){
 		return HAL_ERROR;
 	}
 
 	// Deactivating Interrupts for CAN2
-	if(HAL_CAN_DeactivateNotification(&bms->bmsCAN.bhcan2, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK){
+	if(HAL_CAN_DeactivateNotification(bms->bmsCAN.bhcan2, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK){
+		return HAL_ERROR;
+	}
+
+/*
+	 ==============================================================================
+						   ##### STOPPING NRF905 #####
+	 ==============================================================================
+*/
+	// Setting error mode for NRF905
+	if(BMS_NRF905_Set_ErrorMode(bms) != HAL_OK){
 		return HAL_ERROR;
 	}
 
@@ -211,7 +236,6 @@ HAL_StatusTypeDef BMS_LED_Blink(BMS_TypeDef* bms){
 
 	// Universal variables
 	uint32_t lastTick = HAL_GetTick() - 1;
-	uint16_t duty = 0;
 
 
 	if(lastTick - HAL_GetTick() - 1 >= 500){
