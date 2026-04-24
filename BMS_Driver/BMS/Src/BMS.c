@@ -16,8 +16,10 @@
 
 /* Includes ----------------------------------------------------------------------------------  */
 #include "BMS.h"
+#include "BMS_ADC_driver.h"
+#include "BMS_CAN_driver.h"
 
-/* Variable --------------------------------------------------------------------------------  */
+/* Variables ---------------------------------------------------------------------------------  */
 extern uint32_t lastTick;
 
 /* Functions' bodies -------------------------------------------------------------------------  */
@@ -29,7 +31,6 @@ HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_Han
 	bms->bmsCAN.bhcan1      = bhcan1;
 	bms->bmsCAN.bhcan2      = bhcan2;
 	bms->errorLogger.huart1 = huart;
-	bms->bmsNRF905.hspi1    = hspi;
 
 	// setting default status (normal) for BMS
 	bms->status     = BMS_NORMAL;
@@ -41,11 +42,6 @@ HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_Han
 	// reseting array which stores cells' voltages, whose values are provided by CAN2
 	for(int i = 0; i< 7; ++i){ memset(bms->bmsCAN.CAN2_temperatureCells[i], 0, sizeof(bms->bmsCAN.CAN2_temperatureCells[i][0]));}
 
-	//Init of NRF905
-	if(BMS_NRF905_Init(bms) != HAL_OK){
-        return HAL_ERROR;
-    }
-    
 	// Launching CAN1 and CAN2
 	if(BMS_CAN_Init(bms) != HAL_OK){
 		return HAL_ERROR;
@@ -55,6 +51,9 @@ HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_Han
 	if(BMS_ADC_Init(bms) != HAL_OK){
 		return HAL_ERROR;
 	}
+
+	// Init EH
+    EH_init(&bms->beh, bms->bmsCAN.bhcan1, BMS_NODE, &(bms->bmsCAN.CAN1_Buff));
 
 
 	return HAL_OK;
@@ -79,12 +78,6 @@ HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms){
 
 	// Send Data via CAN
 	CAN_HandleScheduled(bms->bmsCAN.bhcan1, &bms->bmsCAN.CAN1_Buff);
-
-
-	// Launching sending data via nrf905
-	if(BMS_NRF905_Mode_Normal(bms) != HAL_OK){
-		return HAL_ERROR;
-	}
 
 	return HAL_OK;
 }
@@ -142,13 +135,9 @@ HAL_StatusTypeDef BMS_Start_Peripherals(BMS_TypeDef* bms){
 	                       ##### LAUNCHING ADC #####
 	 ==============================================================================
 */
-	// Launching DMA for ADC
-	if(HAL_ADC_Start_DMA(bms->bmsADC.hadc, (uint32_t*)bms->bmsADC.badc1.idma.BufferADC, ADC_BUFF_SIZE) != HAL_OK){
-		return HAL_ERROR;
-	}
 
 	// Launching ADC for BMS
-	if(ADC_Init(bms->bmsADC.hadc, &bms->bmsADC.badc1, &bms->bmsADC.cadc1) != HAL_OK){
+	if(ADC_Init(bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1) != HAL_OK){
 		return HAL_OK;
 	}
 
@@ -175,17 +164,6 @@ HAL_StatusTypeDef BMS_Start_Peripherals(BMS_TypeDef* bms){
 		if(HAL_CAN_WakeUp(bms->bmsCAN.bhcan2) != HAL_OK){
 			return HAL_ERROR;
 		}
-	}
-
-
-/*
-	 ==============================================================================
-						   ##### LAUNCHING NRF905 #####
-	 ==============================================================================
-*/
-	// Setting normal mode for NRF905
-	if(BMS_NRF905_Set_NormalMode(bms) != HAL_OK){
-		return HAL_ERROR;
 	}
 
 	return HAL_OK;
@@ -226,15 +204,6 @@ HAL_StatusTypeDef BMS_Stop_Peripherals(BMS_TypeDef* bms){
 		return HAL_ERROR;
 	}
 
-/*
-	 ==============================================================================
-						   ##### STOPPING NRF905 #####
-	 ==============================================================================
-*/
-	// Setting error mode for NRF905
-	if(BMS_NRF905_Set_ErrorMode(bms) != HAL_OK){
-		return HAL_ERROR;
-	}
 
 
 	return HAL_OK;

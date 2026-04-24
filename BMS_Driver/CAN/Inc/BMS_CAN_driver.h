@@ -37,13 +37,16 @@ extern "C" {
 	 ==============================================================================
 */
 
-// CAN Scaling parameters
+// CAN1 Scaling parameters
 #define VOLTAGE_OFFSET          12.0f
 #define VOLTAGE_GAIN 		    0.0059f
 #define CURRENT_OFFSET          300.0f
 #define CURRENT_GAIN 		    0.1465f
 #define TEMPERATURE_OFFSET      50.0f
 #define TEMPERATURE_GAIN        0.024f
+
+// CAN2 scalling params
+#define THERM_TEMPERATURE_GAIN  (0.39216f)
 
 // CAN Frames DLCs
 #define BMS_NODE_DLC		    8
@@ -70,6 +73,7 @@ extern "C" {
 #define BMS_THERM9_ID			139
 
 
+
 /* Functions' prototypes ------------------------------------------------------------------  */
 
 HAL_StatusTypeDef BMS_CAN_Init(BMS_TypeDef* bms);
@@ -78,27 +82,27 @@ HAL_StatusTypeDef BMS_CAN_AddMessage(BMS_TypeDef* bms, uint32_t Id, uint8_t DLC,
 
 HAL_StatusTypeDef BMS_CAN_AddPeripheralFrames(BMS_TypeDef* bms);
 
-void 			  BMS_CAN_Get_ADC_Data(uint8_t *data);
+void 			  BMS_CAN_Get_ADC_Data(uint8_t *data, void *context);
 
 void 			  BMS_CAN_PackCAN2Temps(uint8_t* data, uint8_t thermId);
 
-void 			  BMS_CAN_Get_CAN2_Data_Therm1(uint8_t *data);
+void 			  BMS_CAN_Get_CAN2_Data_Therm1(uint8_t *data, void* context);
 
-void 			  BMS_CAN_Get_CAN2_Data_Therm2(uint8_t *data);
+void 			  BMS_CAN_Get_CAN2_Data_Therm2(uint8_t *data, void* context);
 
-void 			  BMS_CAN_Get_CAN2_Data_Therm3(uint8_t *data);
+void 			  BMS_CAN_Get_CAN2_Data_Therm3(uint8_t *data, void* context);
 
-void 			  BMS_CAN_Get_CAN2_Data_Therm4(uint8_t *data);
+void 			  BMS_CAN_Get_CAN2_Data_Therm4(uint8_t *data, void* context);
 
-void 			  BMS_CAN_Get_CAN2_Data_Therm5(uint8_t *data);
+void 			  BMS_CAN_Get_CAN2_Data_Therm5(uint8_t *data, void* context);
 
-void 			  BMS_CAN_Get_CAN2_Data_Therm6(uint8_t *data);
+void 			  BMS_CAN_Get_CAN2_Data_Therm6(uint8_t *data, void* context);
 
-void 			  BMS_CAN_Get_CAN2_Data_Therm7(uint8_t *data);
+void 			  BMS_CAN_Get_CAN2_Data_Therm7(uint8_t *data, void* context);
 
-void 			  BMS_CAN_Get_CAN2_Data_Therm8(uint8_t *data);
+void 			  BMS_CAN_Get_CAN2_Data_Therm8(uint8_t *data, void* context);
 
-void 			  BMS_CAN_Get_CAN2_Data_Therm9(uint8_t *data);
+void 			  BMS_CAN_Get_CAN2_Data_Therm9(uint8_t *data, void* context);
 
 uint8_t 		  BMS_CAN_GetMSB(uint16_t value);
 

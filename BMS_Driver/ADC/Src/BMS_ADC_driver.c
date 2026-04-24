@@ -15,12 +15,13 @@
   */
 
 #include "BMS_ADC_driver.h"
+#include "BMS_CAN_driver.h"
 
 HAL_StatusTypeDef BMS_ADC_Init(BMS_TypeDef* bms){
 
 
 	// Init ADC
-	if(ADC_Init(bms->bmsADC.hadc, &bms->bmsADC.badc1, &bms->bmsADC.cadc1) != HAL_OK){
+	if(ADC_Init(bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1) != HAL_OK){
 		return HAL_ERROR;
 	}
 
@@ -50,16 +51,10 @@ HAL_StatusTypeDef BMS_ADC_ReadValues(BMS_TypeDef* bms){
 
 HAL_StatusTypeDef BMS_ADC_Read_Voltage(BMS_TypeDef* bms){
 
-	uint16_t voltage_b = 0; // binary type of voltage
 	float voltage_f = 0.0f; // real type of voltage
 
-	// reading channel's value
-	if(ADC_ReadChannel(bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, ADC_VOLTAGE_CH, &voltage_b) != HAL_OK){
-		return HAL_ERROR;
-	}
-
 	// calculating real value of voltage
-	if(ADC_GetValue(bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, VCC_SUPPLY_VOLTAGE, ADC_CHANNEL_12, &voltage_f) != HAL_OK){
+	if(ADC_Get_PinVoltage(bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, ADC_CHANNEL_12, &voltage_f) != HAL_OK){
 		return HAL_ERROR;
 	}
 
@@ -89,7 +84,7 @@ HAL_StatusTypeDef BMS_ADC_Read_Temperature(BMS_TypeDef* bms){
 	}
 
 	// calculating voltage before voltage divider
-	if(ADC_GetValue(bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, VCC_SUPPLY_VOLTAGE, ADC_TEMP_CH, &voltage_f) != HAL_OK){
+	if(ADC_Get_PinVoltage(bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, ADC_TEMP_CH, &voltage_f) != HAL_OK){
 		return HAL_ERROR;
 	}
 
@@ -100,7 +95,11 @@ HAL_StatusTypeDef BMS_ADC_Read_Temperature(BMS_TypeDef* bms){
 	temperature_f = BMS_ADC_NTC_calibrateTemperature(BMS_ADC_NTC_GetTemperature(Rt) + 1.4f);
 
 	// security check if calculated temperature exceeds calculations range
-	if(temperature_f > 100 || temperature_f < 0){
+	if(temperature_f > TEMP_MAX || temperature_f < TEMP_MIN){
+
+		// Report to EH
+		EH_report(&bms->beh, EH_BMS_TEMP_HIGH, ERROR_SEVERITY_SAFE_STATE);
+
 		return HAL_ERROR;
 	}
 
