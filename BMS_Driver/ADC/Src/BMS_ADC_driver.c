@@ -75,24 +75,16 @@ HAL_StatusTypeDef BMS_ADC_Read_Temperature(BMS_TypeDef* bms){
 	float Rt            = 0.0f;		// resistance of thermistor
 	float temperature_f = 0.0f;		// calculated temperature
 
-	uint16_t voltage_b  = 0;		// binary value of voltage on stm32's pin: PC0
-
-
-	// reading value
-	if(ADC_ReadChannel(bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, ADC_TEMP_CH, &voltage_b) != HAL_OK){
-		return HAL_ERROR;
-	}
-
 	// calculating voltage before voltage divider
 	if(ADC_Get_PinVoltage(bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, ADC_TEMP_CH, &voltage_f) != HAL_OK){
 		return HAL_ERROR;
 	}
 
 	// calculating resistance
-	Rt = 12456 / voltage_f * (3.218f - voltage_f);
+	Rt = 10000.0f * (STM32_VCC / voltage_f - 1);
 
 	// Calculating and calibrating temperature
-	temperature_f = BMS_ADC_NTC_calibrateTemperature(BMS_ADC_NTC_GetTemperature(Rt) + 1.4f);
+	temperature_f = BMS_ADC_NTC_GetTemperature(Rt);
 
 	// security check if calculated temperature exceeds calculations range
 	if(temperature_f > TEMP_MAX || temperature_f < TEMP_MIN){
@@ -133,23 +125,12 @@ HAL_StatusTypeDef BMS_ADC_Read_Current(BMS_TypeDef* bms){
 	return HAL_OK;
 }
 
-float BMS_ADC_NTC_calibrateTemperature(float measured) {
-
-    // calibrating points
-    float T1 = 25.0f;  // real temperature
-    float M1 = 28.0f;  // measured value
-    float T2 = 36.6f;
-    float M2 = 39.2f;
-
-    // linear interpolation
-    return T1 + (measured - M1) * (T2 - T1) / (M2 - M1);
-}
 
 float BMS_ADC_NTC_GetTemperature(float Rt) {
 
 
 	// table of temperatures
-    static const float T[101] = {
+    static float T[101] = {
         0,1,2,3,4,5,6,7,8,9,10,
         11,12,13,14,15,16,17,18,19,20,
         21,22,23,24,25,26,27,28,29,30,
@@ -164,7 +145,7 @@ float BMS_ADC_NTC_GetTemperature(float Rt) {
 
 
     // table of Resistances
-    static const float R[101] = {
+    static float R[101] = {
         27515,26344,25230,24169,23159,22197,21281,20407,19574,18780,
         18017,17300,16611,15953,15324,14724,14150,13602,13079,12578,
         12099,11642,11204,10785,10384,10000,9632,9280,8942,8619,
@@ -188,14 +169,13 @@ float BMS_ADC_NTC_GetTemperature(float Rt) {
 
 
     // search for closes restistance
-    for (int i = 0; i < 100; i++) {
-
+    for (uint8_t i = 0; i < 100; i++) {
 
     	// checking if exact R is higher and lower to the closes resistance from table
-        if (Rt <= R[i] && Rt >= R[i+1]) {
+        if (Rt <= R[i] && Rt >= R[i + 1]) {
 
         	// returning interpolated value of temperature
-            return T[i] + (T[i+1]-T[i]) * (Rt-R[i]) / (R[i+1]-R[i]);
+            return T[i] + (T[i+1] - T[i]) * (Rt - R[i]) / (R[i + 1]-R[i]);
 
 
         }

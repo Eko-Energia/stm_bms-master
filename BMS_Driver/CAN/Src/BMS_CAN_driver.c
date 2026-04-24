@@ -32,9 +32,6 @@ HAL_StatusTypeDef BMS_CAN_Init(BMS_TypeDef* bms){
 		return HAL_ERROR;
 	}
 
-	// Launching CAN1
-	CAN_Init(bms->bmsCAN.bhcan1);
-
 	// Adding frames co-related to peripherals data
 	if(BMS_CAN_AddPeripheralFrames(bms) != HAL_OK){
 		return HAL_ERROR;
@@ -173,17 +170,17 @@ HAL_StatusTypeDef BMS_CAN_ScallingParams(BMS_TypeDef* bms, uint8_t channel, floa
 		case ADC_VOLTAGE_CH:
 
 			// calculating binary type of read voltage with factor and offset
-			bms->bmsADC.ADC_voltTempCurr[0] = (*value_f - VOLTAGE_OFFSET)     / VOLTAGE_GAIN;
+			bms->bmsADC.ADC_voltTempCurr[0] = (*value_f + VOLTAGE_OFFSET)     / VOLTAGE_GAIN;
 			break;
 		case ADC_CURRENT_CH:
 
 			// calculating binary type of read voltage with factor and offset
-			bms->bmsADC.ADC_voltTempCurr[2] = (*value_f - CURRENT_OFFSET)     / CURRENT_GAIN;
+			bms->bmsADC.ADC_voltTempCurr[2] = (*value_f + CURRENT_OFFSET)     / CURRENT_GAIN;
 			break;
 		case ADC_TEMP_CH:
 
 			// calculating binary type of read voltage with factor and offset
-			bms->bmsADC.ADC_voltTempCurr[1] = (*value_f - TEMPERATURE_OFFSET) / TEMPERATURE_GAIN;
+			bms->bmsADC.ADC_voltTempCurr[1] = (*value_f + TEMPERATURE_OFFSET) / TEMPERATURE_GAIN;
 			break;
 		default:
 
@@ -201,7 +198,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan){
 		static CAN_RxHeaderTypeDef RxHeader;	// Init header for Rx frame
 		static uint8_t* rxData;				    // Init data storage for Rx frame's data
 
-		float  thermTemperatyure = 0.0f;       // temperature to eventually trigger EH if its value it too high
+		//float  thermTemperatyure = 0.0f;       // temperature to eventually trigger EH if its value it too high
 
 		if(HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &RxHeader, rxData) == HAL_OK){
 
@@ -209,13 +206,13 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan){
 			int pcbIndex = (RxHeader.StdId - 200) / 10;						// extracting number from Id, PCB index stand as a second number in frame's ID
 			uint8_t thermIndex = RxHeader.StdId - 200 - pcbIndex * 10;		// extracting number from Id, thermistor index stand as a third number in frame's ID
 
-			thermTemperatyure = (float)*rxData * THERM_TEMPERATURE_GAIN;
+			/*thermTemperatyure = (float)*rxData * THERM_TEMPERATURE_GAIN;
 
 			if(thermTemperatyure >= TEMP_MAX){
 				// Report to EH
 				EH_report(&bms.beh, EH_CAN2_TEMP_HIGH, ERROR_SEVERITY_SAFE_STATE);
 
-			}
+			}*/
 
 
 			// overwriting container for cells' temperatures with new value. indexes are decreamented cause indexes in arrays starts from index 0, but calculated numbers start from 1
