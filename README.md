@@ -1,31 +1,42 @@
-BMS Master:
+# BMS Master
 
-The project includes implementations of functionalities included in the BMS design:
+The BMS Master project provides a robust implementation of essential Battery Management System functionalities for **Perła** Solar Car.
 
-    Some of these include: communication via CAN1 and CAN2 buses, radio communication, and reading the main battery current, 	temperature, and voltage values from the ADC.
+### Key Features
 
-    Project uses peripherals' drivers layer to standarize and simplify debugging and workflow of stm32's peripherals.
+- **Dual CAN Communication:** Full support for CAN1 and CAN2 buses.
+- **Radio Communication:** Wireless data transmission capabilities.
+- **ADC Data Acquisition:** Precise measurement of main battery parameters, including voltage, current, and temperature.
+- **Standardized Hardware Abstraction:** Built on a custom peripheral driver layer designed to simplify debugging and unify the workflow across different STM32 microcontrollers.
 
-Status
+### Project Status
 
-    Non-started stages:
+#### ⏳ Pending
 
-    	- RS485 Communication with BMS JK by Dikong
+- RS485 communication with JK BMS.
+- PWM-based MOSFET control and power management.
 
-    Under construction stages:
-    	None
+#### 🏗️ In Progress
 
-    Completed stages:
-    	- reading the main battery voltage values from the ADC
-    		-- reading voltage
-    		-- reading current
-    		-- reading temperature
-    	- CAN1 & CAN2 communication
+- None
 
-How to Run:
-To properly launch project on BMS Master PCB board, it only requires correct hardware connection. Loading project on STM32 core is held via ST-LINK V2.
+#### ✅ Completed
 
-Authors:
+- **Signals Measurement:**
+  - Voltage monitoring.
+  - Current sensing.
+  - Temperature measurement.
+- **Communication Stacks:**
+  - Integrated CAN1 and CAN2 communication drivers.
 
-    - Bartosz Rychlicki 		  		– Firmware
-    - Szymon Frączek & Wiktor Klaszczyk - PCB
+### Deployment
+
+To deploy the project on the BMS Master PCB:
+
+1. Ensure all hardware connections are correctly established according to the schematics.
+2. Flash the firmware onto the STM32 core using an **ST-LINK V2** debugger.
+
+### Development Team
+
+- **Bartosz Rychlicki** – Firmware Engineering
+- **Szymon Frączek & Wiktor Klaszczyk** – PCB Design & Hardware
