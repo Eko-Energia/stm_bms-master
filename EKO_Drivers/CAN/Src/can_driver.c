@@ -30,29 +30,30 @@
  */
 void CAN_Init(CAN_HandleTypeDef *hcanPtr)
 {
+	if(CAN2 == hcanPtr->Instance){
+		if (HAL_CAN_ActivateNotification(hcanPtr, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK)
+		{
+			Error_Handler();
+		}
 
-	if (HAL_CAN_ActivateNotification(hcanPtr, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK)
-	{
-		Error_Handler();
-	}
+		CAN_FilterTypeDef filterConfig;
 
-	CAN_FilterTypeDef filterConfig;
+		filterConfig.FilterBank = 14;
+		filterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
+		filterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
+		filterConfig.FilterIdHigh = 0x0000;
+		filterConfig.FilterIdLow = 0x0000;
+		filterConfig.FilterMaskIdHigh = 0x0000;
+		filterConfig.FilterMaskIdLow = 0x0000;
+		filterConfig.FilterFIFOAssignment = CAN_RX_FIFO0;
+		filterConfig.FilterActivation = ENABLE;
+		filterConfig.SlaveStartFilterBank = 14;
 
-	filterConfig.FilterBank = 0;
-	filterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
-	filterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
-	filterConfig.FilterIdHigh = 0x0000;
-	filterConfig.FilterIdLow = 0x0000;
-	filterConfig.FilterMaskIdHigh = 0x0000;
-	filterConfig.FilterMaskIdLow = 0x0000;
-	filterConfig.FilterFIFOAssignment = CAN_RX_FIFO0;
-	filterConfig.FilterActivation = ENABLE;
-	filterConfig.SlaveStartFilterBank = 14;
-
-	if (HAL_CAN_ConfigFilter(hcanPtr, &filterConfig) != HAL_OK)
-	{
-		/* Filter configuration Error */
-		Error_Handler();
+		if (HAL_CAN_ConfigFilter(hcanPtr, &filterConfig) != HAL_OK)
+		{
+			/* Filter configuration Error */
+			Error_Handler();
+		}
 	}
 
 	if (HAL_CAN_Start(hcanPtr) != HAL_OK)

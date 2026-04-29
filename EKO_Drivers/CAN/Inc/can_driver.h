@@ -17,7 +17,7 @@
  */
 
 #define CAN_MAX_DLC (8)
-#define CAN_MAX_MSG (32)
+#define CAN_MAX_MSG (11)
 
 /**
  * @brief Generic macro to swap endianness based on variable type.~

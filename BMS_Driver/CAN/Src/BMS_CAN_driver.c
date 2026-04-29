@@ -8,7 +8,7 @@
   ******************************************************************************
   * @attention Error codes are called when exact incorrect use of function is made
   *
-  * Copyright (c) 2025 AGH Eko-Energy.
+  * Copyright (c) 2026 AGH Eko-Energy.
   * All rights reserved.
   *
   ******************************************************************************
@@ -26,11 +26,6 @@ HAL_StatusTypeDef BMS_CAN_Init(BMS_TypeDef* bms){
 	// Init of CAN1 and CAN2 to start communication via these buses
 	CAN_Init(bms->bmsCAN.bhcan1);
 	CAN_Init(bms->bmsCAN.bhcan2);
-
-	// launching interrupts for CAN2
-	if(HAL_CAN_ActivateNotification(bms->bmsCAN.bhcan2, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK){
-		return HAL_ERROR;
-	}
 
 	// Adding frames co-related to peripherals data
 	if(BMS_CAN_AddPeripheralFrames(bms) != HAL_OK){
@@ -193,12 +188,13 @@ HAL_StatusTypeDef BMS_CAN_ScallingParams(BMS_TypeDef* bms, uint8_t channel, floa
 }
 
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan){
+
 	if(hcan->Instance == CAN2){
 
-		static CAN_RxHeaderTypeDef RxHeader;	// Init header for Rx frame
-		static uint8_t* rxData;				    // Init data storage for Rx frame's data
+		static CAN_RxHeaderTypeDef RxHeader = {0};	// Init header for Rx frame
+		static uint8_t rxData[8] = {0};				    // Init data storage for Rx frame's data
 
-		//float  thermTemperatyure = 0.0f;       // temperature to eventually trigger EH if its value it too high
+		float  thermTemperatyure = 0.0f;       // temperature to eventually trigger EH if its value it too high
 
 		if(HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &RxHeader, rxData) == HAL_OK){
 
@@ -206,14 +202,13 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan){
 			int pcbIndex = (RxHeader.StdId - 200) / 10;						// extracting number from Id, PCB index stand as a second number in frame's ID
 			uint8_t thermIndex = RxHeader.StdId - 200 - pcbIndex * 10;		// extracting number from Id, thermistor index stand as a third number in frame's ID
 
-			/*thermTemperatyure = (float)*rxData * THERM_TEMPERATURE_GAIN;
+			thermTemperatyure = (float)rxData[0] * THERM_TEMPERATURE_GAIN;
 
 			if(thermTemperatyure >= TEMP_MAX){
 				// Report to EH
 				EH_report(&bms.beh, EH_CAN2_TEMP_HIGH, ERROR_SEVERITY_SAFE_STATE);
 
-			}*/
-
+			}
 
 			// overwriting container for cells' temperatures with new value. indexes are decreamented cause indexes in arrays starts from index 0, but calculated numbers start from 1
 			bms.bmsCAN.CAN2_temperatureCells[pcbIndex - 1][thermIndex - 1] = rxData[0];
