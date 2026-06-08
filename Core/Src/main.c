@@ -49,8 +49,8 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-BMS_TypeDef bms;
-uint32_t lastTick;
+BMS_TypeDef bms;				/*<Init of BMS's object>*/
+uint32_t lastTick;				/*<Init ot variable with stores last tick of LED blinking>*/
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -108,7 +108,7 @@ int main(void)
 
 
   /*BMS---------------------------------------------------------*/
-  // Init of BMS to launch workflow
+  // Init of BMS to launch work-flow
   if(BMS_Init(&bms, &hcan1, &hcan2, &hadc1, &hspi1, &huart1) != HAL_OK){
 	  Error_Handler();
   }
@@ -126,27 +126,8 @@ int main(void)
 	  // Blinking LED according to current BMS's state
 	  BMS_Mode_LEDBlink(&bms);
 
-	  // state machine
-	  switch(bms.status){
-		  case BMS_NORMAL:
-
-			  // Launching Normal mode for BMS
-			  if(BMS_Mode_Normal(&bms) != HAL_OK){
-				  BMS_Mode_Change(&bms, BMS_Error);
-			 }
-
-			 break;
-		 case BMS_Error:
-
-			 // Launching Normal mode for BMS
-			 BMS_Mode_Error(&bms);
-
-
-			 break;
-		 default:
-			 break;
-
-	 }
+	  // Launching Normal mode for BMS
+	  BMS_Mode_Normal(&bms);
 
     /* USER CODE END WHILE */
 
@@ -214,7 +195,7 @@ void SystemClock_Config(void)
 static void MX_NVIC_Init(void)
 {
   /* DMA1_Channel1_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 0, 0);
+  HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 3, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
 }
 
@@ -230,16 +211,12 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
 
-
-	BMS_Mode_Error(&bms);
   /* User can add his own implementation to report the HAL error return state */
 
   __disable_irq();
   while (1)
   {
-	  char message[] = "Error logger";
 
-	  UNUSED(message);
   }
   /* USER CODE END Error_Handler_Debug */
 }

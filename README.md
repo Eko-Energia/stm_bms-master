@@ -1,78 +1,79 @@
-# BMS Master — Firmware
+# BMS Master
 
-The **BMS Master** is the central control unit for a Battery Management System. It is designed to monitor battery health (voltage, current, temperature), manage high-level communication via **CAN buses** and **RS485**, and provide long-range telemetry via an **nRF905 radio transceiver**.
+The BMS Master project provides a robust implementation of essential Battery Management System functionalities.
 
-## Key Features
+### Key Features
 
-* **Dual CAN Bus Communication:** Integrated support for both the main vehicle CAN (CAN1) and dedicated battery pack communication (CAN2).
-* **Radio Telemetry:** Wireless communication using the **nRF905** transceiver via SPI interface.
-* **Precision Sensing:** Real-time monitoring of battery voltage, current (Hall sensor), and temperature via ADC.
-* **RS485 Interface:** Dedicated communication link for **JK BMS (Dikong)** integration.
-* **Abstraction Layer:** Built using a custom peripheral driver layer to standardize the workflow and simplify debugging across the STM32 platform.
+- **Dual CAN Communication:** Full support for CAN1 and CAN2 buses.
+- **ADC Data Acquisition:** Precise measurement of main battery parameters, including voltage, current, and temperature with precisly selected sampling time.
+- **Standardized Hardware Abstraction:** Built on a custom peripheral driver layer designed to simplify debugging and unify the workflow across different STM32 microcontrollers.
 
----
+### Hardware Pinout
 
-## Hardware Pinout Configuration
+| Peripheral     | Signal             | STM32 Pin       | Description                            |
+| :------------- | :----------------- | :-------------- | :------------------------------------- |
+| **CAN1**       | RX / TX            | PA11 / PA12     | Main Vehicle Bus                       |
+| **CAN2**       | RX / TX            | PB12 / PB13     | Battery Pack Bus                       |
+| **ADC1**       | IN10 / IN11 / IN12 | PC0 / PC1 / PC2 | Analog Inputs (Temp, Current, Voltage) |
+| **UART1**      | TX / RX            | PA9 / PA10      | JK BMS Interface                       |
+| **UART2**      | TX / RX            | PA2 / PA3       | Debug Console (CLI)                    |
+| **RS485 CTL**  | RE / DE            | PC5 / PC4       | RS485 Direction Control                |
+| **System**     | OSC_IN / OSC_OUT   | PH0 / PH1       | External High Speed Oscillator (HSE)   |
+| **Status LED** | RED / GREEN        | PB8 / PB9       | Error & Status Indicators              |
+| **Debug**      | SWDIO / SWCLK      | PA13 / PA14     | ST-Link Interface                      |
 
-The following table describes the pin mapping for the STM32 MCU as configured on the BMS Master PCB.
+### Peripheral Features & Configuration
 
-| PINOUT | STM PIN | DESCRIPTION |
-| :--- | :--- | :--- |
-| **PC14_OSC32_IN** | PC14 | Oscilloscope Input 16MHz 1 |
-| **PD0_OSC_IN** | PD0 | Oscilloscope Input 16MHz 2 |
-| **TEMP** | PC0 | Temperature Measurement (ADC) |
-| **HALL_OUT** | PC1 | Current Measurement (Hall Sensor via ADC) |
-| **VOLTAGE** | PC2 | Battery Voltage Measurement (ADC) |
-| **USART2_TX/RC** | PA2 / PA3 | Debugging Interface |
-| **SPI_NSS** | PA4 | nRF905 SPI Enable (Active Low) |
-| **SPI_SCK** | PA5 | nRF905 SPI Clock |
-| **SPI_MISO** | PA6 | nRF905 SPI Output |
-| **SPI_MOSI** | PA7 | nRF905 SPI Input |
-| **D1 / D0** | PB0 / PB1 | Radio Amplifier Control |
-| **BOOT1** | PB2 | Secondary Boot Pin |
-| **CAN2_RX / TX** | PB12 / PB13 | Battery Pack CAN Bus |
-| **TX_EN** | PB14 | nRF905 Mode (1=TX, 0=RX) |
-| **TRX_CE** | PB15 | nRF905 Chip Enable (RX/TX) |
-| **PWR_UP** | PC6 | nRF905 Power Up |
-| **UPCLK** | PC7 | nRF905 Output Clock |
-| **DR** | PC8 | nRF905 Data Ready |
-| **AM** | PC9 | nRF905 Address Match |
-| **CD** | PA8 | nRF905 Carrier Detect |
-| **USART1_TX/RX** | PA9 / PA10 | RS485 Communication (BMS JK / Dikong) |
-| **CAN1_RX / TX** | PA11 / PA12 | Main Vehicle CAN (500 kbit/s) |
-| **SWDIO / SWCLK** | PA13 / PA14 | Programming & Debugging (ST-Link) |
-| **LED_RED** | PB8 | Onboard Status LED (Red) |
-| **LED_GREEN** | PB9 | Onboard Status LED (Green) |
-| **RE_DIR / RS_DIR**| PC5 / PC4 | RS485 Transceiver Direction Control (Receive/Send) |
+#### 📡 Communication
 
----
+- **CAN1 & CAN2:** High-speed CAN configuration (500 kbit/s). CAN2 operates with RX FIFO0 Pending Interrupt enabled for asynchronous data frame processing.
+- **UART1 (BMS JK):** 115200 8N1, optimized for RS485 half-duplex communication with external BMS.
+- **UART2 (Error Logger):** Standard asynchronous mode for real-time system logging.
 
-## Project Status
+#### ⚡ Data Acquisition (ADC)
 
-### ✅ Completed (Module logic implemented)
-* **ADC Sensing:** Reliable reading of Voltage, Current, and Temperature values.
-* **Radio Communication:** nRF905 transceiver logic and SPI driver fully operational.
-* **CAN Communication:** Both CAN1 (Vehicle) and CAN2 (Battery) interfaces are functional.
+- **Multi-Channel Scanning:** ADC1 configured for sequential scanning of Temperature, Current, and Voltage sensors.
+- **DMA Integration:** Utilizes Circular DMA Buffer to offload the CPU, ensuring continuous background data updates without polling overhead.
 
-### 🟡 Under Construction
-* **RS485 Communication:** Implementation of the protocol for JK BMS (Dikong) integration.
-* **Error Management:** Developing comprehensive error reporting and handling via `Error_Handler`.
+#### ⏱️ System & Clock
 
-### 🧪 Testing & Validation
-> [!IMPORTANT]
-> While the core logic for **CAN**, **Radio**, and **ADC** modules is completed, they are currently in the **validation phase**. Rigorous hardware-in-the-loop testing is required to ensure stability and accuracy under real-world conditions before final deployment.
+- **HSE (External Oscillator):** System clock driven by an external crystal oscillator for high frequency stability, essential for reliable CAN bus timing.
 
----
+### Project Status
 
-## How to Run
+#### ⏳ Pending
 
-1.  **Hardware Connection:** Ensure the BMS Master PCB is correctly powered and all sensors (Hall, Voltage divider, NTC) are connected to the designated pins.
-2.  **Development Environment:** Open the project in your preferred STM32 IDE (e.g., STM32CubeIDE).
-3.  **Flashing:** Connect an **ST-LINK V2** to the SWD pins (PA13/PA14) and upload the firmware.
+- RS485 communication with JK BMS (by Heltec/JiKong).
+- PWM-based MOSFET control and power management.
 
----
+#### 🏗️ In Progress
 
-## Authors
+- None
 
-* **Bartosz Rychlicki** – Firmware
-* **Szymon Frączek & Wiktor Klaszczyk** – PCB Design
+#### ✅ Completed
+
+- **ADC Driver Implementation:**
+  - Voltage monitoring.
+  - Current sensing.
+  - Temperature measurement.
+- **Communication Stacks:**
+  - Integrated CAN1 and CAN2 communication drivers.
+
+### Deployment
+
+To deploy the project on the BMS Master PCB:
+
+1. Ensure all hardware connections are correctly established according to the schematics.
+2. Flash the firmware onto the STM32 core using an **ST-LINK V2** debugger.
+
+### 🚀 Future Roadmap
+
+- **RTOS Integration:** Migration of the current bare-metal architecture to a Real-Time Operating System (Azure RTOS or FreeRTOS) to improve multi-threading capabilities, especially for simultaneous CAN communication and radio handling.
+- **Low-Power Optimization:** Implementation of advanced power management, including STM32 "Stop" and "Standby" modes, with wake-up events triggered by CAN traffic or nRF905 signals to minimize stationary energy consumption.
+- **SIL Testing Environment:** Transition from on-target TDD (CUnit) to Software-in-the-Loop (SIL) testing using Google Test (GTest) for faster logic verification and CI/CD readiness.
+- **RS485 Full Stack:** Finalizing the communication layer for the JK BMS to enable full battery pack diagnostics and balancing control.
+
+### Development Team
+
+- **Bartosz Rychlicki** – Firmware Engineering
+- **Szymon Frączek & Wiktor Klaszczyk** – PCB Design & Hardware
