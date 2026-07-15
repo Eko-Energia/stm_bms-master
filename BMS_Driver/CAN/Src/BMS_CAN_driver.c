@@ -17,7 +17,11 @@
 #include "BMS_CAN_driver.h"
 
 /* Variables ---------------------------------------------------------*/
-extern BMS_TypeDef bms;
+extern BMS_TypeDef 		   bms;
+static uint8_t 	   		   rxMsgReceived;
+
+static CAN_RxHeaderTypeDef RxHeader = {0};				    // Init header for Rx frame
+static uint8_t 			   rxData[8] = {0};				    // Init data storage for Rx frame's data
 
 
 /* Functions' bodies -------------------------------------------------*/
@@ -187,31 +191,53 @@ HAL_StatusTypeDef BMS_CAN_ScallingParams(BMS_TypeDef* bms, uint8_t channel, floa
 	return HAL_OK;
 }
 
+HAL_StatusTypeDef HAL_CAN_HandleRxMsg(CAN_HandleTypeDef *hcan){
+
+	// if msg was received - process it
+	if(1 == rxMsgReceived){
+
+
+		// reseting flag
+		rxMsgReceived = 0;
+
+
+		float  thermTemperatyure = 0.0f;       								// temperature to eventually trigger EH if its value it too high
+
+		// turning on critical section
+		__disable_irq();
+
+		int pcbIndex = (RxHeader.StdId - 200) / 10;							// extracting number from Id, PCB index stand as a second number in frame's ID
+		uint8_t thermIndex = RxHeader.StdId - 200 - pcbIndex * 10;			// extracting number from Id, thermistor index stand as a third number in frame's ID
+
+		// turning off critical section
+		__enable_irq();
+
+
+		thermTemperatyure = (float)rxData[0] * THERM_TEMPERATURE_GAIN;  	// calculating temperature
+
+
+		if(thermTemperatyure >= TEMP_MAX){									// if temperature too high -> report safe state
+			// Report to EH
+			EH_report(&bms.beh, EH_CAN2_TEMP_HIGH, ERROR_SEVERITY_SAFE_STATE);
+
+			return HAL_ERROR;
+		}
+
+		// overwriting container for cells' temperatures with new value. indexes are decreamented cause indexes in arrays starts from index 0, but calculated numbers start from 1
+		bms.bmsCAN.CAN2_temperatureCells[pcbIndex - 1][thermIndex - 1] = rxData[0];
+	}
+
+	return HAL_OK;
+}
+
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan){
 
 	if(hcan->Instance == CAN2){
 
-		static CAN_RxHeaderTypeDef RxHeader = {0};	// Init header for Rx frame
-		static uint8_t rxData[8] = {0};				    // Init data storage for Rx frame's data
-
-		float  thermTemperatyure = 0.0f;       // temperature to eventually trigger EH if its value it too high
-
 		if(HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &RxHeader, rxData) == HAL_OK){
 
-			// calculating received Number of PCB which sent frame and thermistor index, whose temperature has been sent.
-			int pcbIndex = (RxHeader.StdId - 200) / 10;						// extracting number from Id, PCB index stand as a second number in frame's ID
-			uint8_t thermIndex = RxHeader.StdId - 200 - pcbIndex * 10;		// extracting number from Id, thermistor index stand as a third number in frame's ID
-
-			thermTemperatyure = (float)rxData[0] * THERM_TEMPERATURE_GAIN;
-
-			if(thermTemperatyure >= TEMP_MAX){
-				// Report to EH
-				EH_report(&bms.beh, EH_CAN2_TEMP_HIGH, ERROR_SEVERITY_SAFE_STATE);
-
-			}
-
-			// overwriting container for cells' temperatures with new value. indexes are decreamented cause indexes in arrays starts from index 0, but calculated numbers start from 1
-			bms.bmsCAN.CAN2_temperatureCells[pcbIndex - 1][thermIndex - 1] = rxData[0];
+			// setting flag to proceed received frame
+			rxMsgReceived = 1;
 
 		}
 	}

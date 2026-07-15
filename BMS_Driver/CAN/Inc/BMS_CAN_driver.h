@@ -58,7 +58,7 @@ extern "C" {
 
 //CAN Frames Periods
 #define BMS_NODE_PERIOD		    (5000)
-#define BMS_VOLTCURTEMP_PERIOD  (200)
+#define BMS_VOLTCURTEMP_PERIOD  (500)
 #define BMS_THERMx_PERIOD		(1000)
 
 // CAN Frames IDs
@@ -111,6 +111,8 @@ uint8_t 		  BMS_CAN_GetMSB(uint16_t value);
 uint8_t 		  BMS_CAN_GetLSB(uint16_t value);
 
 HAL_StatusTypeDef BMS_CAN_ScallingParams(BMS_TypeDef* bms, uint8_t channel, float* value_f);
+
+HAL_StatusTypeDef HAL_CAN_HandleRxMsg(CAN_HandleTypeDef *hcan);
 
 void 			  HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan);
 
