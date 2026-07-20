@@ -27,6 +27,10 @@ static uint8_t 			   rxData[8] = {0};				    // Init data storage for Rx frame's
 /* Functions' bodies -------------------------------------------------*/
 HAL_StatusTypeDef BMS_CAN_Init(BMS_TypeDef* bms){
 
+	// Setting normal state for both transceivers
+	HAL_GPIO_WritePin(nCAN1_Stby_GPIO_Port, nCAN1_Stby_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(nCAN2_Stby_GPIO_Port, nCAN2_Stby_Pin, GPIO_PIN_RESET);
+
 	// Init of CAN1 and CAN2 to start communication via these buses
 	CAN_Init(bms->bmsCAN.bhcan1);
 	CAN_Init(bms->bmsCAN.bhcan2);

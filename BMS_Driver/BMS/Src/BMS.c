@@ -85,6 +85,8 @@ HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms){
 	CAN_HandleScheduled(bms->bmsCAN.bhcan1, &bms->bmsCAN.CAN1_Buff);
 
 
+	// Handle PWM generation
+
 	return HAL_OK;
 }
 
