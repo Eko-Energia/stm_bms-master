@@ -97,6 +97,9 @@ HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms){
 
 
 	// Handle PWM generation
+	if(BMS_PWM_NormalMode(bms) != HAL_OK){
+		return HAL_ERROR;
+	}
 
 	return HAL_OK;
 }
@@ -114,6 +117,11 @@ HAL_StatusTypeDef BMS_Mode_Error(BMS_TypeDef* bms){
 		bms->prevStatus = BMS_Error;
 	}
 
+
+	// Handling PWM generation in error/sleep mode
+	if(BMS_PWM_SleepMode(bms) != HAL_OK){
+		return HAL_ERROR;
+	}
 
 	return HAL_OK;
 }
