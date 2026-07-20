@@ -195,7 +195,7 @@ HAL_StatusTypeDef BMS_CAN_ScallingParams(BMS_TypeDef* bms, uint8_t channel, floa
 	return HAL_OK;
 }
 
-HAL_StatusTypeDef HAL_CAN_HandleRxMsg(CAN_HandleTypeDef *hcan){
+HAL_StatusTypeDef BMS_CAN_HandleRxMsg(CAN_HandleTypeDef *hcan){
 
 	// if msg was received - process it
 	if(1 == rxMsgReceived){

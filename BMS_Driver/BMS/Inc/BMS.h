@@ -36,7 +36,7 @@ extern uint32_t lastTick;
 
 
 /* Functions Prototypes --------------------------------------------------------------------  */
-HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_HandleTypeDef* bhcan2, ADC_HandleTypeDef* hadc, SPI_HandleTypeDef* hspi, UART_HandleTypeDef* huart);
+HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_HandleTypeDef* bhcan2, ADC_HandleTypeDef* hadc, UART_HandleTypeDef* huart, TIM_HandleTypeDef* htim);
 
 HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms);
 

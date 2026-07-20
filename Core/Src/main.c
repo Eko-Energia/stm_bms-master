@@ -21,6 +21,7 @@
 #include "adc.h"
 #include "can.h"
 #include "dma.h"
+#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -99,6 +100,7 @@ int main(void)
   MX_CAN2_Init();
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
+  MX_TIM3_Init();
 
   /* Initialize interrupts */
   MX_NVIC_Init();
@@ -106,8 +108,8 @@ int main(void)
 
 
   /*BMS---------------------------------------------------------*/
-  // Init of BMS to launch work-flow
-  if(BMS_Init(&bms, &hcan1, &hcan2, &hadc1, &hspi1, &huart1) != HAL_OK){
+  // Initialization of BMS to launch work-flow
+  if(BMS_Init(&bms, &hcan1, &hcan2, &hadc1, &huart1, &htim3) != HAL_OK){
 	  Error_Handler();
   }
 
