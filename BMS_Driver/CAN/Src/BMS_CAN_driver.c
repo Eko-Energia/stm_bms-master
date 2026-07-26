@@ -17,11 +17,11 @@
 #include "BMS_CAN_driver.h"
 
 /* Variables ---------------------------------------------------------*/
-extern BMS_TypeDef 		   bms;
-static uint8_t 	   		   rxMsgReceived;
+extern BMS_TypeDef 		   bms;								//< Init BMS object
+static volatile uint8_t    rxMsgReceived;					//< Declaration of flag that indicates status of received CAN2 frame
 
-static CAN_RxHeaderTypeDef RxHeader = {0};				    // Init header for Rx frame
-static uint8_t 			   rxData[8] = {0};				    // Init data storage for Rx frame's data
+static CAN_RxHeaderTypeDef RxHeader = {0};				    //< Init header for Rx frame
+static uint8_t 			   rxData[8] = {0};				    //< Init data storage for Rx frame's data
 
 
 /* Functions' bodies -------------------------------------------------*/
@@ -213,12 +213,10 @@ HAL_StatusTypeDef BMS_CAN_HandleRxMsg(CAN_HandleTypeDef *hcan){
 		int pcbIndex = (RxHeader.StdId - 200) / 10;							// extracting number from Id, PCB index stand as a second number in frame's ID
 		uint8_t thermIndex = RxHeader.StdId - 200 - pcbIndex * 10;			// extracting number from Id, thermistor index stand as a third number in frame's ID
 
-		// turning off critical section
-		__enable_irq();
-
-
 		thermTemperatyure = (float)rxData[0] * THERM_TEMPERATURE_GAIN;  	// calculating temperature
 
+		// turning off critical section
+		__enable_irq();
 
 		if(thermTemperatyure >= TEMP_MAX){									// if temperature too high -> report safe state
 			// Report to EH
