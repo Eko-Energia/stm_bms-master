@@ -86,6 +86,7 @@ HAL_StatusTypeDef BMS_ADC_Read_Temperature(BMS_TypeDef* bms){
 	// Calculating and calibrating temperature
 	temperature_f = BMS_ADC_NTC_GetTemperature(Rt);
 
+#ifdef PROD
 	// security check if calculated temperature exceeds calculations range
 	if(temperature_f > TEMP_MAX || temperature_f < TEMP_MIN){
 
@@ -94,6 +95,7 @@ HAL_StatusTypeDef BMS_ADC_Read_Temperature(BMS_TypeDef* bms){
 
 		return HAL_ERROR;
 	}
+#endif
 
 	// converting real value of temperature with factor and offset to achieve type of value, which is ready to be sent via CAN1
 	if(BMS_CAN_ScallingParams(bms, ADC_TEMP_CH, &temperature_f) != HAL_OK){

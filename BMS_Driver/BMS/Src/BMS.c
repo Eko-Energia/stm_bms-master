@@ -8,7 +8,7 @@
   ******************************************************************************
   * @attention Error codes are called when exact incorrect use of function is made
   *
-  * Copyright (c) 2025 AGH Eko-Energy.
+  * Copyright (c) 2026 AGH Eko-Energy.
   * All rights reserved.
   *
   ******************************************************************************
@@ -66,6 +66,14 @@ HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_Han
 	// Init EH
     EH_init(&bms->beh, bms->bmsCAN.bhcan1, BMS_NODE, &(bms->bmsCAN.CAN1_Buff));
 
+    // Setting default safestate status
+    bms->safeStateStatus = 0;
+
+    // setting default value of max stored temperarture
+    bms->maxTemperature = 0.0f;
+
+    // Setting default state of FAN
+    bms->fanState = OFF;
 
 	return HAL_OK;
 }
@@ -88,7 +96,7 @@ HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms){
 	}
 
 	// Handle received frames from CAN2
-	if(BMS_CAN_HandleRxMsg(bms->bmsCAN.bhcan2) != HAL_OK){
+	if(BMS_CAN_HandleRxMsg(bms) != HAL_OK){
 		return HAL_ERROR;
 	}
 
@@ -98,6 +106,16 @@ HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms){
 
 	// Handle PWM generation
 	if(BMS_PWM_NormalMode(bms) != HAL_OK){
+		return HAL_ERROR;
+	}
+
+	// Handling HV Sensing - if safe state and HVIL indicate equal state
+	if(BMS_HVIL_Handler(bms) != HAL_OK){
+		return HAL_ERROR;
+	}
+
+	// Handling FAN controller
+	if(BMS_FAN_Control(bms) != HAL_OK){
 		return HAL_ERROR;
 	}
 
@@ -233,6 +251,69 @@ HAL_StatusTypeDef BMS_Stop_Peripherals(BMS_TypeDef* bms){
 
 
 
+	return HAL_OK;
+}
+
+HAL_StatusTypeDef BMS_HVIL_Handler(BMS_TypeDef* bms){
+
+	if(NULL == bms){
+		return HAL_ERROR;
+	}
+
+
+#ifdef PROD
+
+	if(HAL_GPIO_ReadPin(HVIL_GPIO_Port, HVIL_Pin) == GPIO_PIN_SET &&
+		bms->safeStateStatus == SAFE_STATE_OK){
+
+
+
+		// reporting error handler
+		EH_report(&bms->beh, EH_SAFE_STATE_LEAK, ERROR_SEVERITY_SAFE_STATE);
+
+	}
+
+#endif
+
+	return HAL_OK;
+
+}
+
+HAL_StatusTypeDef BMS_FAN_Control(BMS_TypeDef* bms){
+
+	// Checking if correct pointer to bms object was given
+	if(NULL == bms){
+		return HAL_ERROR;
+	}
+
+	// Triggering FAN if temperature is too high > 50 degrees
+	if(bms->maxTemperature >= PRE_COOLING_TEMP && OFF == bms->fanState){
+		bms->fanState = ON;
+	}
+	// Disabling FAN if temperature passed lower threshold
+	else if(bms->maxTemperature <= POST_COOLING_TEMP && ON == bms->fanState){
+		bms->fanState = OFF;
+	}
+
+	// FAN controller state machine
+	switch(bms->fanState){
+
+		// fan turning on status
+		case ON:
+			HAL_GPIO_WritePin(FAN_CONTROL_GPIO_Port, FAN_CONTROL_Pin, GPIO_PIN_SET);
+			break;
+
+		//  fan turning of state
+		case OFF:
+			HAL_GPIO_WritePin(FAN_CONTROL_GPIO_Port, FAN_CONTROL_Pin, GPIO_PIN_RESET);
+			break;
+
+		// default - incorrect status
+		default:
+			return HAL_ERROR;
+	}
+
+	// returning OK status
 	return HAL_OK;
 }
 

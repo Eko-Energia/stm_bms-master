@@ -195,38 +195,61 @@ HAL_StatusTypeDef BMS_CAN_ScallingParams(BMS_TypeDef* bms, uint8_t channel, floa
 	return HAL_OK;
 }
 
-HAL_StatusTypeDef BMS_CAN_HandleRxMsg(CAN_HandleTypeDef *hcan){
+HAL_StatusTypeDef BMS_CAN_HandleRxMsg(BMS_TypeDef *bms){
+
+	static int thermRxCounter = 0;
 
 	// if msg was received - process it
 	if(1 == rxMsgReceived){
 
-
 		// reseting flag
 		rxMsgReceived = 0;
-
-
-		float  thermTemperatyure = 0.0f;       								// temperature to eventually trigger EH if its value it too high
 
 		// turning on critical section
 		__disable_irq();
 
+		// Reading safe state status
+		if(SAFE_STATE_ID== RxHeader.StdId){
+			bms->safeStateStatus = rxData[0];
+		}
+
 		int pcbIndex = (RxHeader.StdId - 200) / 10;							// extracting number from Id, PCB index stand as a second number in frame's ID
 		uint8_t thermIndex = RxHeader.StdId - 200 - pcbIndex * 10;			// extracting number from Id, thermistor index stand as a third number in frame's ID
 
-		thermTemperatyure = (float)rxData[0] * THERM_TEMPERATURE_GAIN;  	// calculating temperature
+		float thermTemperature = (float)rxData[0] * THERM_TEMPERATURE_GAIN; // calculating temperature
+
+		uint8_t rxByte = rxData[0];											// Received byte
 
 		// turning off critical section
 		__enable_irq();
 
-		if(thermTemperatyure >= TEMP_MAX){									// if temperature too high -> report safe state
+
+#ifdef PROD
+
+		if(thermTemperature >= TEMP_MAX){									// if temperature too high -> report safe state
 			// Report to EH
-			EH_report(&bms.beh, EH_CAN2_TEMP_HIGH, ERROR_SEVERITY_SAFE_STATE);
+			EH_report(&bms->beh, EH_CAN2_TEMP_HIGH, ERROR_SEVERITY_SAFE_STATE);
 
 			return HAL_ERROR;
 		}
 
+#endif
+
+		// Assigning highest read temperature to control FAN state swittchinbg
+		if(thermTemperature > bms->maxTemperature){
+			bms->maxTemperature = thermTemperature;
+		}
+
+		// incremeenting rx frame counter to properly reset maxTemperature - ppreventing from holding constantly high value, even if this does not exist in runtime after cooling
+		thermRxCounter++;
+
+		// Reseting maxTemperature variable to prevent holding high temp value after cooling
+		if(POST_COOLING_TEMP >= thermTemperature || ON == bms->fanState){
+			bms->maxTemperature = 0.0f;
+		}
+
 		// overwriting container for cells' temperatures with new value. indexes are decreamented cause indexes in arrays starts from index 0, but calculated numbers start from 1
-		bms.bmsCAN.CAN2_temperatureCells[pcbIndex - 1][thermIndex - 1] = rxData[0];
+		bms->bmsCAN.CAN2_temperatureCells[pcbIndex - 1][thermIndex - 1] = rxByte;
 	}
 
 	return HAL_OK;

@@ -73,6 +73,7 @@ extern "C" {
 #define BMS_THERM7_ID			(137)
 #define BMS_THERM8_ID			(138)
 #define BMS_THERM9_ID			(139)
+#define SAFE_STATE_ID			(1)
 
 
 
@@ -112,7 +113,7 @@ uint8_t 		  BMS_CAN_GetLSB(uint16_t value);
 
 HAL_StatusTypeDef BMS_CAN_ScallingParams(BMS_TypeDef* bms, uint8_t channel, float* value_f);
 
-HAL_StatusTypeDef BMS_CAN_HandleRxMsg(CAN_HandleTypeDef *hcan);
+HAL_StatusTypeDef BMS_CAN_HandleRxMsg(BMS_TypeDef* bms);
 
 void 			  HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan);
 
