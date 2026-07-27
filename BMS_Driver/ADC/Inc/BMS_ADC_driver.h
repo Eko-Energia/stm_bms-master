@@ -31,18 +31,66 @@ extern "C" {
 
 
 /* Functions' prototypes ---------------------------------------------------------------------  */
+
+/*
+	 ==============================================================================
+						   ##### ADC INIT / READ #####
+	 ==============================================================================
+*/
+
+/*
+  * @brief  Initializes BMS ADC peripheral (channels config and conversion buffer)
+  * @param  bms Pointer to BMS handle
+  * @retval HAL_OK on success, HAL_ERROR on failure
+  */
 HAL_StatusTypeDef BMS_ADC_Init(BMS_TypeDef* bms);
 
+/*
+  * @brief  Reads all BMS ADC channels (voltage, temperature, current)
+  * @param  bms Pointer to BMS handle
+  * @retval HAL_OK on success, HAL_ERROR on failure
+  */
 HAL_StatusTypeDef BMS_ADC_ReadValues(BMS_TypeDef* bms);
 
+/*
+  * @brief  Reads pack voltage from ADC, applies divider and CAN scaling
+  * @param  bms Pointer to BMS handle
+  * @retval HAL_OK on success, HAL_ERROR on failure
+  */
 HAL_StatusTypeDef BMS_ADC_Read_Voltage(BMS_TypeDef* bms);
 
+/*
+  * @brief  Reads NTC temperature from ADC, converts via LUT and applies CAN scaling
+  * @param  bms Pointer to BMS handle
+  * @retval HAL_OK on success, HAL_ERROR on failure
+  */
 HAL_StatusTypeDef BMS_ADC_Read_Temperature(BMS_TypeDef* bms);
 
+/*
+  * @brief  Reads current from ADC, converts to engineering units and applies CAN scaling
+  * @param  bms Pointer to BMS handle
+  * @retval HAL_OK on success, HAL_ERROR on failure
+  */
 HAL_StatusTypeDef BMS_ADC_Read_Current(BMS_TypeDef* bms);
 
+/*
+	 ==============================================================================
+						   ##### NTC HELPERS #####
+	 ==============================================================================
+*/
+
+/*
+  * @brief  Calibrates measured NTC temperature value
+  * @param  measured Raw / interpolated temperature measurement
+  * @retval Calibrated temperature value
+  */
 float BMS_ADC_NTC_calibrateTemperature(float measured);
 
+/*
+  * @brief  Converts NTC resistance to temperature using R-T lookup table + interpolation
+  * @param  Rt Measured NTC resistance [Ohm]
+  * @retval Temperature in Celsius, or -1000.0f on lookup error
+  */
 float BMS_ADC_NTC_GetTemperature(float Rt);
 
 

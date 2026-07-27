@@ -26,6 +26,12 @@ extern uint32_t pwmStartupStart;
 
 /* Functions' bodies -------------------------------------------------------------------------  */
 
+/*
+	 ==============================================================================
+						   ##### INIT #####
+	 ==============================================================================
+*/
+
 HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_HandleTypeDef* bhcan2, ADC_HandleTypeDef* hadc, UART_HandleTypeDef* huart, TIM_HandleTypeDef* htim){
 
 	// assigning handle objects
@@ -77,6 +83,12 @@ HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_Han
 
 	return HAL_OK;
 }
+
+/*
+	 ==============================================================================
+						   ##### MODE HANDLERS #####
+	 ==============================================================================
+*/
 
 HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms){
 
@@ -172,6 +184,11 @@ HAL_StatusTypeDef BMS_Log_Data(BMS_TypeDef* bms){
 	return HAL_OK;
 }
 
+/*
+	 ==============================================================================
+						   ##### PERIPHERALS #####
+	 ==============================================================================
+*/
 
 HAL_StatusTypeDef BMS_Start_Peripherals(BMS_TypeDef* bms){
 
@@ -254,6 +271,12 @@ HAL_StatusTypeDef BMS_Stop_Peripherals(BMS_TypeDef* bms){
 	return HAL_OK;
 }
 
+/*
+	 ==============================================================================
+						   ##### SAFETY / COOLING #####
+	 ==============================================================================
+*/
+
 HAL_StatusTypeDef BMS_HVIL_Handler(BMS_TypeDef* bms){
 
 	if(NULL == bms){
@@ -316,6 +339,12 @@ HAL_StatusTypeDef BMS_FAN_Control(BMS_TypeDef* bms){
 	// returning OK status
 	return HAL_OK;
 }
+
+/*
+	 ==============================================================================
+						   ##### STATUS LED #####
+	 ==============================================================================
+*/
 
 void BMS_Mode_LEDBlink(BMS_TypeDef* bms){
 
