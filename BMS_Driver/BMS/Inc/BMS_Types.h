@@ -160,7 +160,7 @@ typedef struct{
 */
 
 /* Test Control macro - uncomment when needed */
-/* #define PROD (0x01) */																   /*<Macro that enables FW to trigger error handler in some scenarios - for testing purposes it's commented>*/
+//#define PROD (0x01) 																       /*<Macro that enables FW to trigger error handler in some scenarios - for testing purposes it's commented>*/
 
 /*
 	 ==============================================================================
