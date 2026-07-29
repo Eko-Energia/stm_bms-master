@@ -1,0 +1,2 @@
+C:\msys64\ucrt64\bin\ar.exe qc libbms_host_logic.a CMakeFiles/bms_host_logic.dir/host/bms_protocol.cpp.obj CMakeFiles/bms_host_logic.dir/host/bms_can_rx_processor.cpp.obj CMakeFiles/bms_host_logic.dir/host/bms_fan_controller.cpp.obj CMakeFiles/bms_host_logic.dir/host/bms_peripherals_anchor.cpp.obj
+C:\msys64\ucrt64\bin\ranlib.exe libbms_host_logic.a

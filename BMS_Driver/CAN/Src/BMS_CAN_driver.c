@@ -284,7 +284,7 @@ HAL_StatusTypeDef BMS_CAN_HandleRxMsg(BMS_TypeDef *bms){
 	}
 
 	/*
-	 * Scan complete when all 63 unique thermistors have been seen at least once.
+	 * Scan complete when BMS_THERM_TOTAL unique thermistors have been seen at least once.
 	 * Latch scanMax into maxTemperature for BMS_FAN_Control hysteresis, then reset scan.
 	 */
 	if(thermUniqueCount >= BMS_THERM_TOTAL){
