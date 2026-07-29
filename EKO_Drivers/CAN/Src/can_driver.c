@@ -62,11 +62,14 @@ void CAN_Init(CAN_HandleTypeDef *hcanPtr)
 			Error_Handler();
 		}
 
-		/* ----- Filter bank 15: thermistor ID range 0x200..0x27F ----- */
+		/* ----- Filter bank 15: thermistor StdIds (software bounds-checks pcb/therm).
+		 * IDs are decimal 211..279 (BASE 200 + pcb*10 + therm), NOT hex 0x200.
+		 * Mask don't-care on StdId; SAFE_STATE is exact-matched on bank 14.
+		 */
 		filterConfig.FilterBank = 15;
-		filterConfig.FilterIdHigh = (0x200U << 5);			/* ID base */
+		filterConfig.FilterIdHigh = 0x0000;
 		filterConfig.FilterIdLow = 0x0000;
-		filterConfig.FilterMaskIdHigh = (0x780U << 5);		/* care bits → keep 0x200..0x27F */
+		filterConfig.FilterMaskIdHigh = 0x0000;		/* accept any StdId; app filters map */
 		filterConfig.FilterMaskIdLow = 0x0000;
 
 		if (HAL_CAN_ConfigFilter(hcanPtr, &filterConfig) != HAL_OK)

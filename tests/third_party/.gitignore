@@ -1,0 +1,4 @@
+# Ignore large vendored GoogleTest sources in git if desired — keep zip optional.
+# Uncomment the next line to stop tracking the extracted tree:
+# googletest-1.14.0/
+*.zip
