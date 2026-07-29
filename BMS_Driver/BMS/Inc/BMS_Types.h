@@ -35,7 +35,7 @@
 #include "can_driver.h"
 #include "can_id_list.h"
 #include "error_handler.h"
-
+#include "pwm_driver.h"
 
 /* Typedefs ----------------------------------------------------------------------------------  */
 
@@ -50,9 +50,27 @@ typedef enum{
 
 }BMS_StatusTypeDef_e;
 
+/**
+  * @brief  BMS's PWM status definition
+  */
+typedef enum{
 
+	PWM_Startup = 0,																	/*< BMS's PWM module state on FW startup >*/
+	PWM_Operational																		/*< BMS's PWM state in operational (working stage) >*/
+
+}PWM_BMSStatusTypeDef;
 
 // Structures and unions
+
+/*
+ * @brief Structure of BMS's PWM module
+ */
+typedef struct{
+
+	PWM_BMSStatusTypeDef    status;														/*< BMS's PWM module status>*/
+	struct PWM_Out_signal  htim;														/*< BMS's handle to PWM driver's struct>*/
+
+}PWM_BMSTypeDef;
 
 /**
   * @brief  BMS's ADC object type
@@ -107,7 +125,9 @@ typedef struct{
 	CAN_BMSTypeDef 		   bmsCAN;															/*< BMS's CAN 	 custom typedef object>*/
 	ADC_BMSTypeDef 		   bmsADC;															/*< BMS's ADC 	 custom typedef object>*/
 
-	EH_HandleTypeDef       beh;
+	EH_HandleTypeDef       beh;																/*< BMS's handle to error handler >*/
+
+	PWM_BMSTypeDef		   bpwm;															/*< BMS's PWM custom typedef object>*/
 
 }BMS_TypeDef;
 

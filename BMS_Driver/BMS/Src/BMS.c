@@ -18,19 +18,22 @@
 #include "BMS.h"
 #include "BMS_ADC_driver.h"
 #include "BMS_CAN_driver.h"
+#include "BMS_PWM.h"
 
 /* Variables ---------------------------------------------------------------------------------  */
 extern uint32_t lastTick;
+extern uint32_t pwmStartupStart;
 
 /* Functions' bodies -------------------------------------------------------------------------  */
 
-HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_HandleTypeDef* bhcan2, ADC_HandleTypeDef* hadc, SPI_HandleTypeDef* hspi, UART_HandleTypeDef* huart){
+HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_HandleTypeDef* bhcan2, ADC_HandleTypeDef* hadc, UART_HandleTypeDef* huart, TIM_HandleTypeDef* htim){
 
 	// assigning handle objects
 	bms->bmsADC.hadc        = hadc;
 	bms->bmsCAN.bhcan1      = bhcan1;
 	bms->bmsCAN.bhcan2      = bhcan2;
 	bms->errorLogger.huart1 = huart;
+	bms->bpwm.htim.htim 	= htim;
 
 	// setting default status (normal) for BMS
 	bms->status     = BMS_NORMAL;
@@ -51,6 +54,14 @@ HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_Han
 	if(BMS_ADC_Init(bms) != HAL_OK){
 		return HAL_ERROR;
 	}
+
+	// Initialization of TIM (PWM)
+	if(BMS_PWM_Init(bms, htim) != HAL_OK){
+		return HAL_ERROR;
+	}
+
+	// updating tick for pwm startup phase
+	pwmStartupStart = HAL_GetTick();
 
 	// Init EH
     EH_init(&bms->beh, bms->bmsCAN.bhcan1, BMS_NODE, &(bms->bmsCAN.CAN1_Buff));
@@ -77,7 +88,7 @@ HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms){
 	}
 
 	// Handle received frames from CAN2
-	if(HAL_CAN_HandleRxMsg(hcan) != HAL_OK){
+	if(BMS_CAN_HandleRxMsg(bms->bmsCAN.bhcan2) != HAL_OK){
 		return HAL_ERROR;
 	}
 
@@ -86,6 +97,9 @@ HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms){
 
 
 	// Handle PWM generation
+	if(BMS_PWM_NormalMode(bms) != HAL_OK){
+		return HAL_ERROR;
+	}
 
 	return HAL_OK;
 }
@@ -103,6 +117,11 @@ HAL_StatusTypeDef BMS_Mode_Error(BMS_TypeDef* bms){
 		bms->prevStatus = BMS_Error;
 	}
 
+
+	// Handling PWM generation in error/sleep mode
+	if(BMS_PWM_SleepMode(bms) != HAL_OK){
+		return HAL_ERROR;
+	}
 
 	return HAL_OK;
 }

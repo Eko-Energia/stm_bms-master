@@ -73,8 +73,8 @@ void Error_Handler(void);
 #define RS_DIR_GPIO_Port GPIOC
 #define RE_DIR_Pin GPIO_PIN_5
 #define RE_DIR_GPIO_Port GPIOC
-#define RELAY_CONTROL_Pin GPIO_PIN_0
-#define RELAY_CONTROL_GPIO_Port GPIOB
+#define RELAY_CTRL_Pin GPIO_PIN_0
+#define RELAY_CTRL_GPIO_Port GPIOB
 #define FAN_CONTROL_Pin GPIO_PIN_1
 #define FAN_CONTROL_GPIO_Port GPIOB
 #define TX_EN_Pin GPIO_PIN_14

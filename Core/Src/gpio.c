@@ -55,13 +55,13 @@ void MX_GPIO_Init(void)
                           |nCAN1_Stby_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, RELAY_CONTROL_Pin|FAN_CONTROL_Pin|TX_EN_Pin|TRX_CE_Pin
-                          |RED_LD_Pin|GREEN_LD_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, FAN_CONTROL_Pin|TX_EN_Pin|TRX_CE_Pin|RED_LD_Pin
+                          |GREEN_LD_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : PtPin */
   GPIO_InitStruct.Pin = HVIL_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(HVIL_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PtPin */
@@ -79,9 +79,9 @@ void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PBPin PBPin PBPin PBPin
-                           PBPin PBPin */
-  GPIO_InitStruct.Pin = RELAY_CONTROL_Pin|FAN_CONTROL_Pin|TX_EN_Pin|TRX_CE_Pin
-                          |RED_LD_Pin|GREEN_LD_Pin;
+                           PBPin */
+  GPIO_InitStruct.Pin = FAN_CONTROL_Pin|TX_EN_Pin|TRX_CE_Pin|RED_LD_Pin
+                          |GREEN_LD_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
