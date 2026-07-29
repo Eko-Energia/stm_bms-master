@@ -76,8 +76,16 @@ HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms){
 		return HAL_ERROR;
 	}
 
+	// Handle received frames from CAN2
+	if(HAL_CAN_HandleRxMsg(hcan) != HAL_OK){
+		return HAL_ERROR;
+	}
+
 	// Send Data via CAN
 	CAN_HandleScheduled(bms->bmsCAN.bhcan1, &bms->bmsCAN.CAN1_Buff);
+
+
+	// Handle PWM generation
 
 	return HAL_OK;
 }

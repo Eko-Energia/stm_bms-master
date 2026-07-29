@@ -21,7 +21,6 @@
 #include "adc.h"
 #include "can.h"
 #include "dma.h"
-#include "spi.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -98,7 +97,6 @@ int main(void)
   MX_ADC1_Init();
   MX_CAN1_Init();
   MX_CAN2_Init();
-  MX_SPI1_Init();
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
 

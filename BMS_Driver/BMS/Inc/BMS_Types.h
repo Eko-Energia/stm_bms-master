@@ -116,7 +116,7 @@ typedef struct{
 
 // BMS
 #define BMS_NODE 		   (2)
-#define TEMP_MAX           (52)
+#define TEMP_MAX           (60)
 #define TEMP_MIN           (0)
 #define BMS_VCC_SUPPLY     (87.0f)														   /*<MAX DC Supply Voltage of BMS Master PCB>*/
 
