@@ -108,9 +108,9 @@ int main(void)
 
 
   /*BMS---------------------------------------------------------*/
-  // Initialization of BMS to launch work-flow
+  /* Init BMS object + start CAN/ADC/PWM/EH. On failure enter error mode. */
   if(BMS_Init(&bms, &hcan1, &hcan2, &hadc1, &huart1, &htim3) != HAL_OK){
-	  Error_Handler();
+	  BMS_Mode_Change(&bms, BMS_Error);
   }
 
   /* USER CODE END 2 */
@@ -123,11 +123,24 @@ int main(void)
 
   while (1)
   {
-	  // Blinking LED according to current BMS's state
+	  /* Status LED blink (green = normal, red = error) */
 	  BMS_Mode_LEDBlink(&bms);
 
-	  // Launching Normal mode for BMS
-	  BMS_Mode_Normal(&bms);
+	  /*
+	   * Mode dispatch:
+	   *   BMS_NORMAL → ADC / CAN2 RX / CAN1 TX / relay PWM / HVIL / FAN
+	   *   BMS_Error  → stop sensing path, PWM sleep stub (full faults later)
+	   * Never call BMS_Mode_Change(Error) as the loop condition — that stops
+	   * peripherals every pass and breaks Normal operation.
+	   */
+	  if(bms.status == BMS_NORMAL){
+		  if(BMS_Mode_Normal(&bms) != HAL_OK){
+			  BMS_Mode_Change(&bms, BMS_Error);
+		  }
+	  }
+	  else{
+		  BMS_Mode_Error(&bms);
+	  }
 
     /* USER CODE END WHILE */
 

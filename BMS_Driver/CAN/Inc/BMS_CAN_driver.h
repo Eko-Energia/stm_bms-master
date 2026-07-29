@@ -99,6 +99,19 @@ extern "C" {
 #define BMS_THERM9_ID			(139)													/*< Thermistor group 9 frame ID>*/
 #define SAFE_STATE_ID			(1)														/*< Safe-state status frame ID>*/
 
+/*
+	 ==============================================================================
+						   ##### CAN2 THERM SCAN / FILTER #####
+	 ==============================================================================
+*/
+
+#define BMS_THERM_PCB_COUNT     (7)														/*< Number of slave PCBs providing thermistors>*/
+#define BMS_THERM_PER_PCB       (9)														/*< Thermistors per slave PCB>*/
+#define BMS_THERM_TOTAL         (40)													/*< Full unique therm set for FAN max latch>*/
+#define BMS_THERM_ID_BASE       (200)													/*< CAN2 therm ID = BASE + pcb*10 + therm>*/
+#define BMS_CAN2_THERM_FILTER_ID   (0x200U)												/*< CAN2 HW filter ID base for therm range>*/
+#define BMS_CAN2_THERM_FILTER_MASK (0x780U)												/*< Mask: accept StdId 0x200..0x27F>*/
+
 
 /* Functions' prototypes ------------------------------------------------------------------  */
 

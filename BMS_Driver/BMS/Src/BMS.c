@@ -45,11 +45,11 @@ HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_Han
 	bms->status     = BMS_NORMAL;
 	bms->prevStatus = BMS_NORMAL;
 
-	// reseting array which stores voltage, temperature and current, whose values are converted by ADC
+	// Reset ADC scaled TX buffer (voltage / temperature / current)
 	memset(bms->bmsADC.ADC_voltTempCurr, 0 , sizeof(bms->bmsADC.ADC_voltTempCurr));
 
-	// reseting array which stores cells' voltages, whose values are provided by CAN2
-	for(int i = 0; i< 7; ++i){ memset(bms->bmsCAN.CAN2_temperatureCells[i], 0, sizeof(bms->bmsCAN.CAN2_temperatureCells[i][0]));}
+	/* Clear full CAN2 thermistor matrix [7 PCBs][9 therms] — sizeof whole array, not one byte/row */
+	memset(bms->bmsCAN.CAN2_temperatureCells, 0, sizeof(bms->bmsCAN.CAN2_temperatureCells));
 
 	// Launching CAN1 and CAN2
 	if(BMS_CAN_Init(bms) != HAL_OK){
@@ -198,9 +198,9 @@ HAL_StatusTypeDef BMS_Start_Peripherals(BMS_TypeDef* bms){
 	 ==============================================================================
 */
 
-	// Launching ADC for BMS
+	// Launching ADC for BMS — fail must return HAL_ERROR (do not swallow)
 	if(ADC_Init(bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1) != HAL_OK){
-		return HAL_OK;
+		return HAL_ERROR;
 	}
 
 /*
@@ -245,8 +245,9 @@ HAL_StatusTypeDef BMS_Stop_Peripherals(BMS_TypeDef* bms){
 		return HAL_ERROR;
 	}
 
+	/* Stop ADC DMA stream — failure must propagate as HAL_ERROR */
 	if(HAL_ADC_Stop_DMA(bms->bmsADC.hadc) !=  HAL_OK){
-		return HAL_OK;
+		return HAL_ERROR;
 	}
 
 /*
@@ -309,34 +310,34 @@ HAL_StatusTypeDef BMS_FAN_Control(BMS_TypeDef* bms){
 		return HAL_ERROR;
 	}
 
-	// Triggering FAN if temperature is too high > 50 degrees
+	/*
+	 * Hysteresis on latched maxTemperature (updated only after a full 7x9 unique CAN2 scan):
+	 *   ON  when max >= PRE_COOLING_TEMP  (50 °C)
+	 *   OFF when max <= POST_COOLING_TEMP (40 °C)
+	 * Do not clear maxTemperature here — scan logic owns that value.
+	 */
 	if(bms->maxTemperature >= PRE_COOLING_TEMP && OFF == bms->fanState){
 		bms->fanState = ON;
 	}
-	// Disabling FAN if temperature passed lower threshold
 	else if(bms->maxTemperature <= POST_COOLING_TEMP && ON == bms->fanState){
 		bms->fanState = OFF;
 	}
 
-	// FAN controller state machine
+	/* Drive FAN_CONTROL GPIO from fanState */
 	switch(bms->fanState){
 
-		// fan turning on status
 		case ON:
 			HAL_GPIO_WritePin(FAN_CONTROL_GPIO_Port, FAN_CONTROL_Pin, GPIO_PIN_SET);
 			break;
 
-		//  fan turning of state
 		case OFF:
 			HAL_GPIO_WritePin(FAN_CONTROL_GPIO_Port, FAN_CONTROL_Pin, GPIO_PIN_RESET);
 			break;
 
-		// default - incorrect status
 		default:
 			return HAL_ERROR;
 	}
 
-	// returning OK status
 	return HAL_OK;
 }
 

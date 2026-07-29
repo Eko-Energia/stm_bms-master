@@ -19,8 +19,8 @@ The driver supports PWM input configured on:
 
 To achieve correct and stable measurements:
 
-* The **timer counter frequency MUST be lower than the measured PWM signal frequency**.
-* Whenever possible, use the **maximum timer ARR (auto‑reload) value** to improve measurement resolution.
+* The **timer tick clock MUST be much higher than the measured PWM signal frequency** (many counts per period).
+* Whenever possible, use a **large timer ARR (auto‑reload)** so the captured period does not overflow.
 * The calculated duty cycle will be **slightly lower than the real duty cycle** due to the finite rise/fall time of the signal. Slower signal transitions reduce measurement accuracy.
 
 ---
@@ -118,7 +118,7 @@ Structure used for PWM output generation.
 | Function       | Description                                                   |
 | -------------- | ------------------------------------------------------------- |
 | PWM_IC_Init    | Initialize PWM input structure and configure IC channel       |
-| PWM_IC_update  | Calculate duty cycle from captured values (call in interrupt) |
+| PWM_IC_update  | Store period/pulse captures and set dataReady (call in IC callback) |
 | PWM_IC_Monitor | Detect signal timeout and force 0% or 100%                    |
 
 ### PWM Output

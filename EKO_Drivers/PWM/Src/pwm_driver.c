@@ -10,11 +10,10 @@
  *  - TIM Channel 1 (period on CH1, duty on CH2)
  *  - TIM Channel 2 (period on CH2, duty on CH1)
  *
- * To achieve a sensible reading timer frequency MUST be lower than that
- * of the signal to be red. Whenever possible it is recommended to use the
- * maximal possible counter period value. Calculated duty will always be slightly
- * lower than the actual, it is caused by the time it takes for the signal to change from
- * high to low state, longer change causes accuracy loss.
+ * To achieve a sensible reading the timer tick clock MUST be much higher than
+ * the measured PWM signal frequency (many counts per period). Whenever possible
+ * use a large ARR so the captured period does not overflow. Calculated duty will
+ * always be slightly lower than the actual due to finite rise/fall times.
  *
  * @author AGH EKO-ENERGIA
  * @author Andrzej Gondek
@@ -55,7 +54,7 @@ void PWM_Out_setDuty(struct PWM_Out_signal *PWM,float duty)
  * @param GPIO_Pin GPIO pin number used for PWM input monitoring.
  *
  * @note The timeout is calculated as:
- *       TIMEOUT_MS = (1000 / frequency) * PWM_monitorPeriodCount
+ *       TIMEOUT_MS = (1000.0f / frequency) * PWM_monitorPeriodCount
  *       Minimum timeout is clamped to 1 ms.
  *
  * @warning If frequency is set incorrectly or to 0, timeout calculation
@@ -64,24 +63,31 @@ void PWM_Out_setDuty(struct PWM_Out_signal *PWM,float duty)
  * @retval None
  */
 void PWM_IC_Monitor(struct PWM_IC_signal* signal, GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin) {
-    // 1. Perform calculations if new data was captured by the interrupt
+    /* 1) If IC callback posted new captures, compute duty = (high_time / period) * 100 */
     if (signal->dataReady) {
         if (signal->icVal != 0) {
             signal->duty = ((float)signal->icPulseVal * 100.0f) / (float)signal->icVal;
         }
-        // Clear flag after processing
         signal->dataReady = false;
         signal->clock = HAL_GetTick();
     }
 
-    // 2. Original Timeout Monitoring Logic
+    /*
+     * 2) Signal-loss timeout:
+     *    TIMEOUT_MS = (1000 / frequency) * PWM_monitorPeriodCount  (min 1 ms)
+     *    frequency==0 → keep minimum timeout to avoid divide-by-zero
+     */
     uint32_t now = HAL_GetTick();
-    uint32_t TIMEOUT_MS = (2000.0f / signal->frequency) * (float)PWM_monitorPeriodCount;
+    uint32_t TIMEOUT_MS = 1;
 
-    if (TIMEOUT_MS < 1) {
-        TIMEOUT_MS = 1;
+    if (signal->frequency > 0) {
+        TIMEOUT_MS = (uint32_t)((1000.0f / (float)signal->frequency) * (float)PWM_monitorPeriodCount);
+        if (TIMEOUT_MS < 1) {
+            TIMEOUT_MS = 1;
+        }
     }
 
+    /* No edges for TIMEOUT_MS → treat pin as stuck HIGH (100%) or LOW (0%) */
     if ((now - signal->clock) > TIMEOUT_MS) {
         if (HAL_GPIO_ReadPin(GPIOx, GPIO_Pin) == GPIO_PIN_SET) {
             signal->duty = 100.0f;

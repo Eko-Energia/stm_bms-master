@@ -54,13 +54,13 @@ HAL_StatusTypeDef BMS_PWM_NormalMode(BMS_TypeDef* bms){
 		return HAL_ERROR;
 	}
 
-	// Updating PWM duty cycle
+	// Updating PWM duty cycle: 100% during startup window, then 50% operational
 	PWM_Out_setDuty(&bms->bpwm.htim, (bms->bpwm.status == PWM_Startup) ? RELAY_STARTUP_DUTY : RELAY_OPERATIONAL_DUTY);
 
-	// Checking if startup phase ended
+	// After STARTUP_PERIOD [ms], switch PWM module status to operational
 	if(HAL_GetTick() - pwmStartupStart >= STARTUP_PERIOD){
 
-		// Chaning mode to operational after period of startup phase ended
+		// Change internal PWM status — duty above follows RELAY_OPERATIONAL_DUTY
 		if(BMS_PWM_ChandeMode(bms, PWM_Operational) != HAL_OK){
 			return HAL_ERROR;
 		}

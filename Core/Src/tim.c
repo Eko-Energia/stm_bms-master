@@ -38,12 +38,13 @@ void MX_TIM3_Init(void)
   TIM_OC_InitTypeDef sConfigOC = {0};
 
   /* USER CODE BEGIN TIM3_Init 1 */
-
+  /* Target: 1 kHz relay PWM. With TIMCLK≈72 MHz: f = 72e6 / (PSC+1) / (ARR+1).
+   * Cube sets Prescaler/Period below — keep 71 / 999 for 1 kHz. */
   /* USER CODE END TIM3_Init 1 */
   htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 0;
+  htim3.Init.Prescaler = 71;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 65535;
+  htim3.Init.Period = 999;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_OC_Init(&htim3) != HAL_OK)
@@ -65,7 +66,20 @@ void MX_TIM3_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN TIM3_Init 2 */
-
+  /*
+   * RELAY_CTRL (PB0 / TIM3_CH3) must be PWM1, not OC Timing.
+   * Cube may generate Output Compare / TIM_OCMODE_TIMING — override here so
+   * regenerate does not leave the relay pin without PWM output.
+   * PSC=71, ARR=999 @ ~72 MHz timer clock → 1 kHz PWM (matches RELAY_*_FREQ).
+   */
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
+  {
+    Error_Handler();
+  }
   /* USER CODE END TIM3_Init 2 */
   HAL_TIM_MspPostInit(&htim3);
 

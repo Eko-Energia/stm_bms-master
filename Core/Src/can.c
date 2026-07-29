@@ -55,7 +55,16 @@ void MX_CAN1_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN CAN1_Init 2 */
-
+  /*
+   * Enable bus-off recovery and retransmission for vehicle CAN robustness.
+   * Re-init applies flags after Cube-generated defaults (may be DISABLE).
+   */
+  hcan1.Init.AutoBusOff = ENABLE;
+  hcan1.Init.AutoRetransmission = ENABLE;
+  if (HAL_CAN_Init(&hcan1) != HAL_OK)
+  {
+    Error_Handler();
+  }
   /* USER CODE END CAN1_Init 2 */
 
 }
@@ -87,7 +96,16 @@ void MX_CAN2_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN CAN2_Init 2 */
-
+  /*
+   * Same robustness settings as CAN1 (AutoBusOff + AutoRetransmission).
+   * Re-init after Cube defaults so regenerate does not drop these enables.
+   */
+  hcan2.Init.AutoBusOff = ENABLE;
+  hcan2.Init.AutoRetransmission = ENABLE;
+  if (HAL_CAN_Init(&hcan2) != HAL_OK)
+  {
+    Error_Handler();
+  }
   /* USER CODE END CAN2_Init 2 */
 
 }

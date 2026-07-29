@@ -36,14 +36,22 @@ void CAN_Init(CAN_HandleTypeDef *hcanPtr)
 			Error_Handler();
 		}
 
-		CAN_FilterTypeDef filterConfig;
+		CAN_FilterTypeDef filterConfig = {0};
 
+		/*
+		 * CAN2 RX filters (SlaveStartFilterBank = 14 on F105 connectivity line):
+		 *   Bank 14 → SAFE_STATE StdId = 1 (exact match)
+		 *   Bank 15 → thermistor StdIds 0x200..0x27F (mask); app still bounds-checks pcb/therm
+		 * StdId is placed in FilterIdHigh[15:5] for 32-bit scale filters.
+		 */
+
+		/* ----- Filter bank 14: SAFE_STATE_ID (1) exact ----- */
 		filterConfig.FilterBank = 14;
 		filterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
 		filterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
-		filterConfig.FilterIdHigh = 0x0000;
+		filterConfig.FilterIdHigh = (1U << 5);				/* StdId = 1 */
 		filterConfig.FilterIdLow = 0x0000;
-		filterConfig.FilterMaskIdHigh = 0x0000;
+		filterConfig.FilterMaskIdHigh = (0x7FFU << 5);		/* all 11 StdId bits must match */
 		filterConfig.FilterMaskIdLow = 0x0000;
 		filterConfig.FilterFIFOAssignment = CAN_RX_FIFO0;
 		filterConfig.FilterActivation = ENABLE;
@@ -51,7 +59,18 @@ void CAN_Init(CAN_HandleTypeDef *hcanPtr)
 
 		if (HAL_CAN_ConfigFilter(hcanPtr, &filterConfig) != HAL_OK)
 		{
-			/* Filter configuration Error */
+			Error_Handler();
+		}
+
+		/* ----- Filter bank 15: thermistor ID range 0x200..0x27F ----- */
+		filterConfig.FilterBank = 15;
+		filterConfig.FilterIdHigh = (0x200U << 5);			/* ID base */
+		filterConfig.FilterIdLow = 0x0000;
+		filterConfig.FilterMaskIdHigh = (0x780U << 5);		/* care bits → keep 0x200..0x27F */
+		filterConfig.FilterMaskIdLow = 0x0000;
+
+		if (HAL_CAN_ConfigFilter(hcanPtr, &filterConfig) != HAL_OK)
+		{
 			Error_Handler();
 		}
 	}
