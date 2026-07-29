@@ -15,33 +15,42 @@
   *
   ******************************************************************************
   */
-/* Typedefs --------------------------------------------------------------------------------  */
-/**
-  * @brief  BMS's mode status | enumeration type
-  */
-
 
 #ifndef INC_BMS_TYPES_H_
 #define INC_BMS_TYPES_H_
 
 /* Includes --------------------------------------------------------------------------------  */
 
-// General
+/* General */
 #include "main.h"
 #include "string.h"
 
-// Drivers
+/* Drivers */
 #include "adc_driver.h"
 #include "can_driver.h"
-#include "can_id_list.h"
 #include "error_handler.h"
 #include "pwm_driver.h"
 
 /* Typedefs ----------------------------------------------------------------------------------  */
 
-// Enumeration types
+/*
+	 ==============================================================================
+						   ##### ENUMERATIONS #####
+	 ==============================================================================
+*/
+
 /**
-  * @brief  BMS's status definition
+  * @brief  FAN control status definition
+  */
+typedef enum{
+
+	OFF  = 0,																		/*< BMS's FAN OFF status>*/
+	ON																				/*< BMS's FAN ON status>*/
+
+}FAN_StatusTypeDef_e;
+
+/**
+  * @brief  BMS operating mode status definition
   */
 typedef enum{
 
@@ -60,11 +69,15 @@ typedef enum{
 
 }PWM_BMSStatusTypeDef;
 
-// Structures and unions
-
 /*
- * @brief Structure of BMS's PWM module
- */
+	 ==============================================================================
+						   ##### STRUCTURES #####
+	 ==============================================================================
+*/
+
+/**
+  * @brief Structure of BMS's PWM module
+  */
 typedef struct{
 
 	PWM_BMSStatusTypeDef    status;														/*< BMS's PWM module status>*/
@@ -101,7 +114,7 @@ typedef struct{
 
 
 /**
-  * @brief  BMS object type
+  * @brief  BMS error logger object type
   */
 typedef struct{
 
@@ -112,7 +125,7 @@ typedef struct{
 }BMS_ErrorLoggerTypeDef;
 
 /**
-  * @brief  BMS object type
+  * @brief  Main BMS object type aggregating peripherals and runtime state
   */
 typedef struct{
 
@@ -129,31 +142,84 @@ typedef struct{
 
 	PWM_BMSTypeDef		   bpwm;															/*< BMS's PWM custom typedef object>*/
 
+	uint8_t                safeStateStatus;													/*< Variable stores safe state status>*/
+
+	FAN_StatusTypeDef_e	   fanState;														/*<	Variable stores info of fan status ON/OFF>*/
+
+	float 				   maxTemperature;													/*< Variable that stores max read temperature>*/
+
 }BMS_TypeDef;
 
 
 /* Macros ------------------------------------------------------------------------------------  */
 
-// BMS
-#define BMS_NODE 		   (2)
-#define TEMP_MAX           (60)
-#define TEMP_MIN           (0)
-#define BMS_VCC_SUPPLY     (87.0f)														   /*<MAX DC Supply Voltage of BMS Master PCB>*/
+/*
+	 ==============================================================================
+						   ##### BUILD / TEST CONTROL #####
+	 ==============================================================================
+*/
 
-// ADC
+/* Test Control macro - uncomment when needed */
+//#define PROD (0x01) 																       /*<Macro that enables FW to trigger error handler in some scenarios - for testing purposes it's commented>*/
 
 /*
- *  @brief ADC Channels' numbers macros definitions
- * */
+	 ==============================================================================
+						   ##### BMS GENERAL #####
+	 ==============================================================================
+*/
+
+#define BMS_NODE 		   (2)																/*< BMS node identifier for error handler>*/
+#define TEMP_MAX           (60)																/*< Maximum allowed measured temperature [C]>*/
+#define TEMP_MIN           (0)																/*< Minimum allowed measured temperature [C]>*/
+#define BMS_VCC_SUPPLY     (87.0f)														   /*<MAX DC Supply Voltage of BMS Master PCB>*/
+
+/*
+	 ==============================================================================
+						   ##### ADC CHANNELS #####
+	 ==============================================================================
+*/
+
+/**
+  * @brief ADC Channels' numbers macros definitions
+  */
 #define ADC_VOLTAGE_CH 		(12)															/*<12th channel of ADC1>*/
 #define ADC_CURRENT_CH 		(11)															/*<11th channel of ADC1>*/
 #define ADC_TEMP_CH    		(10)															/*<10th channel of ADC1>*/
 
-// EH
-#define EH_BMS_TEMP_HIGH    (0x100)
-#define EH_CAN2_TEMP_HIGH   (0x200)
+/*
+	 ==============================================================================
+						   ##### ERROR HANDLER CODES #####
+	 ==============================================================================
+*/
 
-// STM32F105
+#define EH_BMS_TEMP_HIGH    (0x100)															/*<Error code for reporting too high temperature on BMS battery>*/
+#define EH_CAN2_TEMP_HIGH   (0x200)															/*<Error code for reporting too high temperature on cells'>*/
+#define EH_SAFE_STATE_LEAK  (0x300)															/*<Error code for reporting incorrect safe state behavior>*/
+
+/*
+	 ==============================================================================
+						   ##### SAFE STATE #####
+	 ==============================================================================
+*/
+
+#define SAFE_STATE_OK		(0x00)															/*<Safe state ok status>*/
+#define SAFE_STATE_ERROR    (0x01)															/*<Safe state error status>*/
+
+/*
+	 ==============================================================================
+						   ##### COOLING THRESHOLDS #####
+	 ==============================================================================
+*/
+
+#define PRE_COOLING_TEMP    (50.0f)															/*< Upper threshold that triggers cooling>*/
+#define POST_COOLING_TEMP   (40.0f)															/*< Lower threshold that disables cooling>*/
+
+/*
+	 ==============================================================================
+						   ##### MCU SUPPLY #####
+	 ==============================================================================
+*/
+
 #define VCC_SUPPLY_VOLTAGE  (3.3f)															/*<MAX DC Supply Voltage for STM32f105>*/
 
 

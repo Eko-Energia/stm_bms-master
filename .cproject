@@ -82,13 +82,13 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="BMS_Driver/ADC/Src"/>
 						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="BMS_Driver/BMS/Src"/>
-						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="BMS_Driver/CAN/Src"/>
 						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="BMS_Driver/PWM/Src"/>
+						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="EKO_Drivers"/>
+						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="BMS_Driver/ADC/Src"/>
+						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="BMS_Driver/CAN/Src"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Core"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Drivers"/>
-						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="EKO_Drivers"/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>

@@ -17,11 +17,11 @@
 #include "BMS_CAN_driver.h"
 
 /* Variables ---------------------------------------------------------*/
-extern BMS_TypeDef 		   bms;
-static uint8_t 	   		   rxMsgReceived;
+extern BMS_TypeDef 		   bms;								//< Init BMS object
+static volatile uint8_t    rxMsgReceived;					//< Declaration of flag that indicates status of received CAN2 frame
 
-static CAN_RxHeaderTypeDef RxHeader = {0};				    // Init header for Rx frame
-static uint8_t 			   rxData[8] = {0};				    // Init data storage for Rx frame's data
+static CAN_RxHeaderTypeDef RxHeader = {0};				    //< Init header for Rx frame
+static uint8_t 			   rxData[8] = {0};				    //< Init data storage for Rx frame's data
 
 
 /* Functions' bodies -------------------------------------------------*/
@@ -195,40 +195,106 @@ HAL_StatusTypeDef BMS_CAN_ScallingParams(BMS_TypeDef* bms, uint8_t channel, floa
 	return HAL_OK;
 }
 
-HAL_StatusTypeDef BMS_CAN_HandleRxMsg(CAN_HandleTypeDef *hcan){
+HAL_StatusTypeDef BMS_CAN_HandleRxMsg(BMS_TypeDef *bms){
 
-	// if msg was received - process it
-	if(1 == rxMsgReceived){
+	/*
+	 * FAN scan state (static): tracks unique thermistors across unordered CAN2 RX.
+	 * thermSeen[][]     - flags which (pcb,therm) pairs arrived in the current scan
+	 * thermUniqueCount  - number of unique sensors seen so far (target: BMS_THERM_TOTAL)
+	 * scanMax           - running maximum temperature within the open scan window
+	 */
+	static uint8_t thermSeen[BMS_THERM_PCB_COUNT][BMS_THERM_PER_PCB] = {0};
+	static uint8_t thermUniqueCount = 0;
+	static float   scanMax = -1000.0f;
 
+	uint32_t stdId;
+	uint8_t  rxByte;
 
-		// reseting flag
-		rxMsgReceived = 0;
+	/* No new CAN2 frame pending from ISR callback */
+	if(1 != rxMsgReceived){
+		return HAL_OK;
+	}
 
+	/* Consume the RX-pending flag (set in HAL_CAN_RxFifo0MsgPendingCallback) */
+	rxMsgReceived = 0;
 
-		float  thermTemperatyure = 0.0f;       								// temperature to eventually trigger EH if its value it too high
+	/*
+	 * Critical section: copy ISR-shared RxHeader/rxData, then unlock.
+	 * All further processing runs with interrupts enabled.
+	 */
+	__disable_irq();
 
-		// turning on critical section
-		__disable_irq();
+	stdId  = RxHeader.StdId;
+	rxByte = rxData[0];
 
-		int pcbIndex = (RxHeader.StdId - 200) / 10;							// extracting number from Id, PCB index stand as a second number in frame's ID
-		uint8_t thermIndex = RxHeader.StdId - 200 - pcbIndex * 10;			// extracting number from Id, thermistor index stand as a third number in frame's ID
+	__enable_irq();
 
-		// turning off critical section
-		__enable_irq();
+	/*
+	 * SAFE_STATE frame (StdId = 1): store status only — do NOT index therm buffer.
+	 * Early return prevents out-of-bounds write from (1-200)/10 math.
+	 */
+	if(SAFE_STATE_ID == stdId){
 
+		bms->safeStateStatus = rxByte;
 
-		thermTemperatyure = (float)rxData[0] * THERM_TEMPERATURE_GAIN;  	// calculating temperature
+		return HAL_OK;
+	}
 
+	/*
+	 * Decode thermistor frame ID:
+	 *   StdId = BMS_THERM_ID_BASE + pcb*10 + therm
+	 *   pcb ∈ [1..7], therm ∈ [1..9]
+	 */
+	int pcbIndex   = ((int)stdId - BMS_THERM_ID_BASE) / 10;
+	int thermIndex = (int)stdId - BMS_THERM_ID_BASE - pcbIndex * 10;
 
-		if(thermTemperatyure >= TEMP_MAX){									// if temperature too high -> report safe state
-			// Report to EH
-			EH_report(&bms.beh, EH_CAN2_TEMP_HIGH, ERROR_SEVERITY_SAFE_STATE);
+	/* Reject IDs outside the valid 7x9 thermistor map (HW filter may still pass 0x200..0x27F) */
+	if(pcbIndex < 1 || pcbIndex > BMS_THERM_PCB_COUNT ||
 
-			return HAL_ERROR;
-		}
+		thermIndex < 1 || thermIndex > BMS_THERM_PER_PCB){
 
-		// overwriting container for cells' temperatures with new value. indexes are decreamented cause indexes in arrays starts from index 0, but calculated numbers start from 1
-		bms.bmsCAN.CAN2_temperatureCells[pcbIndex - 1][thermIndex - 1] = rxData[0];
+		return HAL_OK;
+	}
+
+	/* Convert raw payload byte to temperature [°C] */
+	float thermTemperature = (float)rxByte * THERM_TEMPERATURE_GAIN;
+
+#ifdef PROD
+	/* Production path: escalate over-temperature via error handler (fault policy TBD later) */
+	if(thermTemperature >= TEMP_MAX){
+		EH_report(&bms->beh, EH_CAN2_TEMP_HIGH, ERROR_SEVERITY_SAFE_STATE);
+		return HAL_ERROR;
+	}
+#endif
+
+	/* Store latest raw byte for this (pcb, therm) — used by CAN1 therm group TX */
+	bms->bmsCAN.CAN2_temperatureCells[pcbIndex - 1][thermIndex - 1] = rxByte;
+
+	/* Update running max for the current scan (duplicates may raise scanMax) */
+	if(thermTemperature > scanMax){
+		scanMax = thermTemperature;
+	}
+
+	/* Count each (pcb,therm) only once per scan — arrival order does not matter */
+	if(0 == thermSeen[pcbIndex - 1][thermIndex - 1]){
+
+		thermSeen[pcbIndex - 1][thermIndex - 1] = 1;
+
+		thermUniqueCount++;
+	}
+
+	/*
+	 * Scan complete when all 63 unique thermistors have been seen at least once.
+	 * Latch scanMax into maxTemperature for BMS_FAN_Control hysteresis, then reset scan.
+	 */
+	if(thermUniqueCount >= BMS_THERM_TOTAL){
+
+		bms->maxTemperature = scanMax;					/* latched value used by FAN ON/OFF */
+
+		memset(thermSeen, 0, sizeof(thermSeen));		/* start next scan window */
+
+		thermUniqueCount = 0;
+		scanMax = -1000.0f;
 	}
 
 	return HAL_OK;

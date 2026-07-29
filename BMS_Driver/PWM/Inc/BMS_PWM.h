@@ -49,6 +49,13 @@ extern uint32_t pwmStartupStart;
 
 
  /* Functions' prototypes ------------------------------------------------------------------   */
+
+/*
+	 ==============================================================================
+						   ##### PWM API #####
+	 ==============================================================================
+*/
+
  /*
   * @brief Initialization function for PWM's PWM module
   * @param[in]   BMS_TypeDef* bms - pointer to handle of BMS struct
