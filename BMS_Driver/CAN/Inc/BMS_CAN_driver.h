@@ -42,7 +42,7 @@ extern "C" {
 #define VOLTAGE_OFFSET          (0.0f)													/*< Voltage scaling offset>*/
 #define VOLTAGE_GAIN 		    (0.1f)													/*< Voltage scaling gain>*/
 
-#define CURRENT_OFFSET          (300.0f)												/*< Current scaling offset>*/
+#define CURRENT_OFFSET          (0.0f)												/*< Current scaling offset>*/
 #define CURRENT_GAIN 		    (0.1f)													/*< Current scaling gain>*/
 
 #define TEMPERATURE_OFFSET      (0.0f)													/*< Temperature scaling offset>*/
@@ -109,8 +109,10 @@ extern "C" {
 #define BMS_THERM_PER_PCB       (9)														/*< Thermistors per slave PCB>*/
 #define BMS_THERM_TOTAL         (40)													/*< Full unique therm set for FAN max latch>*/
 #define BMS_THERM_ID_BASE       (200)													/*< CAN2 therm ID = BASE + pcb*10 + therm>*/
-#define BMS_CAN2_THERM_FILTER_ID   (0x200U)												/*< CAN2 HW filter ID base for therm range>*/
-#define BMS_CAN2_THERM_FILTER_MASK (0x780U)												/*< Mask: accept StdId 0x200..0x27F>*/
+#define BMS_CAN2_THERM_FILTER_ID_LO    (0x0C0U)											/*< HW bank 15 ID: 0x0C0..0x0FF covers decimal 211..255>*/
+#define BMS_CAN2_THERM_FILTER_MASK_LO  (0x7C0U)											/*< Mask for bank 15 (bits 10:6)>*/
+#define BMS_CAN2_THERM_FILTER_ID_HI    (0x100U)											/*< HW bank 16 ID: 0x100..0x11F covers decimal 256..279>*/
+#define BMS_CAN2_THERM_FILTER_MASK_HI  (0x7E0U)											/*< Mask for bank 16 (bits 10:5); 280..287 dropped in SW>*/
 
 
 /* Functions' prototypes ------------------------------------------------------------------  */

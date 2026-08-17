@@ -93,7 +93,20 @@ struct CAN_IncomingMsgList
  */
 
 /**
- * @brief Initialize CAN peripheral
+ * @brief Program CAN2 slave RX filter banks (lives in CAN1 on F105).
+ *
+ * Must be called while both CAN handles are still READY — before any
+ * HAL_CAN_Start(). No-op if hcanPtr is not CAN2.
+ *
+ * @param hcanPtr   Pointer to CAN2 handle
+ */
+void CAN_ConfigRxFilters(CAN_HandleTypeDef *hcanPtr);
+
+/**
+ * @brief Start CAN peripheral (and CAN2 RX FIFO0 notification).
+ *
+ * Idempotent: if the handle is already LISTENING, Start is skipped.
+ * Call CAN_ConfigRxFilters() on CAN2 before starting either instance.
  *
  * @param hcanPtr   Pointer to CAN handle
  */

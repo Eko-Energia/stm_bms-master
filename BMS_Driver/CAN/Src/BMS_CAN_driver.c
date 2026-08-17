@@ -27,22 +27,29 @@ static uint8_t 			   rxData[8] = {0};				    //< Init data storage for Rx frame'
 /* Functions' bodies -------------------------------------------------*/
 HAL_StatusTypeDef BMS_CAN_Init(BMS_TypeDef* bms){
 
-	// Setting normal state for both transceivers
+	/* nSTBY low = transceiver normal mode (idle bus recessive) */
 	HAL_GPIO_WritePin(nCAN1_Stby_GPIO_Port, nCAN1_Stby_Pin, GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(nCAN2_Stby_GPIO_Port, nCAN2_Stby_Pin, GPIO_PIN_RESET);
 
-	// Init of CAN1 and CAN2 to start communication via these buses
-	CAN_Init(bms->bmsCAN.bhcan1);
-	CAN_Init(bms->bmsCAN.bhcan2);
-
-	// Adding frames co-related to peripherals data
-	if(BMS_CAN_AddPeripheralFrames(bms) != HAL_OK){
-		return HAL_ERROR;
-	}
-
-	// Launching RCC clock for CAN1 and CAN2
+	/* CAN2 filter SRAM lives in CAN1 — master clock before either Start */
 	__HAL_RCC_CAN1_CLK_ENABLE();
 	__HAL_RCC_CAN2_CLK_ENABLE();
+
+	/*
+	 * F105 dual-CAN: program CAN2SB + slave banks while both handles are still
+	 * READY, then start CAN1 (master) before CAN2. ConfigFilter after CAN1 is
+	 * LISTENING can leave CAN2 stuck in INAK inside HAL_CAN_Start().
+	 */
+	CAN_ConfigRxFilters(bms->bmsCAN.bhcan2);
+	CAN_Init(bms->bmsCAN.bhcan1);
+	//CAN_Init(bms->bmsCAN.bhcan2);
+
+	/* Re-entry from BMS_Start_Peripherals must not duplicate scheduled IDs */
+	if(bms->bmsCAN.CAN1_Buff.size == 0U){
+		if(BMS_CAN_AddPeripheralFrames(bms) != HAL_OK){
+			return HAL_ERROR;
+		}
+	}
 
 	return HAL_OK;
 }
@@ -177,12 +184,12 @@ HAL_StatusTypeDef BMS_CAN_ScallingParams(BMS_TypeDef* bms, uint8_t channel, floa
 			break;
 		case ADC_CURRENT_CH:
 
-			// calculating binary type of read voltage with factor and offset
+			// calculating binary type of read current with factor and offset
 			bms->bmsADC.ADC_voltTempCurr[2] = (*value_f + CURRENT_OFFSET)     / CURRENT_GAIN;
 			break;
 		case ADC_TEMP_CH:
 
-			// calculating binary type of read voltage with factor and offset
+			// calculating binary type of read temperature with factor and offset
 			bms->bmsADC.ADC_voltTempCurr[1] = (*value_f + TEMPERATURE_OFFSET) / TEMPERATURE_GAIN;
 			break;
 		default:
@@ -248,7 +255,7 @@ HAL_StatusTypeDef BMS_CAN_HandleRxMsg(BMS_TypeDef *bms){
 	int pcbIndex   = ((int)stdId - BMS_THERM_ID_BASE) / 10;
 	int thermIndex = (int)stdId - BMS_THERM_ID_BASE - pcbIndex * 10;
 
-	/* Reject IDs outside the valid 7x9 thermistor map (HW filter may still pass 0x200..0x27F) */
+	/* Reject IDs outside the valid 7x9 thermistor map (HW may still pass 0x0C0..0x11F) */
 	if(pcbIndex < 1 || pcbIndex > BMS_THERM_PCB_COUNT ||
 
 		thermIndex < 1 || thermIndex > BMS_THERM_PER_PCB){

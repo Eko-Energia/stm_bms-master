@@ -87,7 +87,7 @@ void MX_CAN2_Init(void)
   hcan2.Init.TimeSeg2 = CAN_BS2_4TQ;
   hcan2.Init.TimeTriggeredMode = DISABLE;
   hcan2.Init.AutoBusOff = DISABLE;
-  hcan2.Init.AutoWakeUp = DISABLE;
+  hcan2.Init.AutoWakeUp = ENABLE;
   hcan2.Init.AutoRetransmission = DISABLE;
   hcan2.Init.ReceiveFifoLocked = DISABLE;
   hcan2.Init.TransmitFifoPriority = DISABLE;
@@ -98,10 +98,13 @@ void MX_CAN2_Init(void)
   /* USER CODE BEGIN CAN2_Init 2 */
   /*
    * Same robustness settings as CAN1 (AutoBusOff + AutoRetransmission).
-   * Re-init after Cube defaults so regenerate does not drop these enables.
+   * AutoWakeUp left DISABLE: AWUM during leave-init has been seen to keep
+   * CAN2 in INAK on F105. Re-init after Cube defaults so regenerate does
+   * not drop these flags.
    */
   hcan2.Init.AutoBusOff = ENABLE;
   hcan2.Init.AutoRetransmission = ENABLE;
+  hcan2.Init.AutoWakeUp = DISABLE;
   if (HAL_CAN_Init(&hcan2) != HAL_OK)
   {
     Error_Handler();
@@ -143,13 +146,26 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /* USER CODE BEGIN CAN1_MspInit 1 */
-
+    /*
+     * Recessive idle on RX so HAL_CAN_Start can see 11 recessive bits (leave INAK).
+     * Cube generates GPIO_NOPULL — override after the generated init.
+     * Do not call AFIO CAN remap macros here: they RMW MAPR and can clear SWJ_CFG
+     * (write-only), which disconnects SWD. Reset mapping is already PA11/PA12.
+     */
+    GPIO_InitStruct.Pin = GPIO_PIN_11;
+    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
   /* USER CODE END CAN1_MspInit 1 */
   }
   else if(canHandle->Instance==CAN2)
   {
   /* USER CODE BEGIN CAN2_MspInit 0 */
-
+    /*
+     * CAN2 is a bxCAN slave: filter banks / SRAM live in CAN1.
+     * Master clock must be running before CAN2EN, or HAL_CAN_Start(INAK) fails.
+     */
+    __HAL_RCC_CAN1_CLK_ENABLE();
   /* USER CODE END CAN2_MspInit 0 */
     /* CAN2 clock enable */
     __HAL_RCC_CAN2_CLK_ENABLE();
@@ -177,7 +193,10 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
     HAL_NVIC_SetPriority(CAN2_RX0_IRQn, 2, 0);
     HAL_NVIC_EnableIRQ(CAN2_RX0_IRQn);
   /* USER CODE BEGIN CAN2_MspInit 1 */
-
+    GPIO_InitStruct.Pin = GPIO_PIN_12;
+    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
   /* USER CODE END CAN2_MspInit 1 */
   }
 }

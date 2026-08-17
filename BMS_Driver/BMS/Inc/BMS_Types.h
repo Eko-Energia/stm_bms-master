@@ -222,6 +222,15 @@ typedef struct{
 
 #define VCC_SUPPLY_VOLTAGE  (3.3f)															/*<MAX DC Supply Voltage for STM32f105>*/
 
+/*
+	 ==============================================================================
+						   ##### BMS Resistors in voltage divider#####
+	 ==============================================================================
+*/
+#define R1					(249000.0f)
+#define R2					(9100.0f)
 
+/* Fixed 10 kΩ from ADC node (PC0) to GND; NTC is the upper leg to VCC */
+#define NTC_LOWER_OHM		(10000.0f)
 
 #endif /* INC_BMS_TYPES_H_ */

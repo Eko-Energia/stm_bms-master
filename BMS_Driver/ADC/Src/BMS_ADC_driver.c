@@ -17,6 +17,11 @@
 #include "BMS_ADC_driver.h"
 #include "BMS_CAN_driver.h"
 
+static float BMS_ADC_Round2(float v){
+	int32_t c = (int32_t)((v >= 0.0f) ? (v * 100.0f + 0.5f) : (v * 100.0f - 0.5f));
+	return (float)c / 100.0f;
+}
+
 HAL_StatusTypeDef BMS_ADC_Init(BMS_TypeDef* bms){
 
 
@@ -51,18 +56,33 @@ HAL_StatusTypeDef BMS_ADC_ReadValues(BMS_TypeDef* bms){
 
 HAL_StatusTypeDef BMS_ADC_Read_Voltage(BMS_TypeDef* bms){
 
-	float voltage_f = 0.0f; // real type of voltage
+	float voltage_f = 0.0f; // real type of voltage on PC2
 
 	// calculating real value of voltage
 	if(ADC_Get_PinVoltage(bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, ADC_CHANNEL_12, &voltage_f) != HAL_OK){
 		return HAL_ERROR;
 	}
 
-	// Calculating voltage before voltage divider
-	voltage_f *= 28.362637362637362637362637362637f;
+	float vcc_f = ((R1 / R2) + 1.0f) * voltage_f * BMS_VPACK_SCALE;
+
+	static float vcc_lp = 0.0f;
+	static float vcc_shown = 0.0f;
+	static uint8_t vcc_lp_primed = 0U;
+	if(0U == vcc_lp_primed){
+		vcc_lp = vcc_f;
+		vcc_shown = BMS_ADC_Round2(vcc_f);
+		vcc_lp_primed = 1U;
+	}else{
+		vcc_lp += (vcc_f - vcc_lp) * BMS_VPACK_LP_ALPHA;
+		if((vcc_lp - vcc_shown) >= BMS_VPACK_HOLD_V ||
+		   (vcc_shown - vcc_lp) >= BMS_VPACK_HOLD_V){
+			vcc_shown = BMS_ADC_Round2(vcc_lp);
+		}
+	}
+	vcc_f = vcc_shown;
 
 	// scaling real value with factor and offset
-	if(BMS_CAN_ScallingParams(bms, ADC_VOLTAGE_CH, &voltage_f) != HAL_OK){
+	if(BMS_CAN_ScallingParams(bms, ADC_VOLTAGE_CH, &vcc_f) != HAL_OK){
 		return HAL_ERROR;
 	}
 
@@ -72,7 +92,7 @@ HAL_StatusTypeDef BMS_ADC_Read_Voltage(BMS_TypeDef* bms){
 HAL_StatusTypeDef BMS_ADC_Read_Temperature(BMS_TypeDef* bms){
 
 	float voltage_f     = 0.0f;		// real value of voltage on stm32's pin: PC0
-	float Rt            = 0.0f;		// resistance of thermistor
+	volatile float Rt            = 0.0f;		// resistance of thermistor
 	float temperature_f = 0.0f;		// calculated temperature
 
 	// calculating voltage before voltage divider
@@ -80,8 +100,17 @@ HAL_StatusTypeDef BMS_ADC_Read_Temperature(BMS_TypeDef* bms){
 		return HAL_ERROR;
 	}
 
-	// calculating resistance
-	Rt = 10000.0f * (STM32_VCC / voltage_f - 1);
+	/*
+	 * Divider: VCC -- NTC -- ADC(PC0) -- 10 kΩ -- GND
+	 * Heating the NTC drops Rt, Vpin rises, T must rise.
+	 * (The inverted pull-up form made T fall to ~5 °C under hot air.)
+	 * Vpin = VCC * Rlower / (Rt + Rlower)
+	 * Rt   = Rlower * (VCC / Vpin - 1)
+	 */
+	if(voltage_f <= 0.05f || voltage_f >= (STM32_VCC - 0.05f)){
+		return HAL_ERROR;
+	}
+	Rt = NTC_LOWER_OHM * (STM32_VCC / voltage_f - 1.0f);
 
 	// Calculating and calibrating temperature
 	temperature_f = BMS_ADC_NTC_GetTemperature(Rt);
@@ -98,7 +127,7 @@ HAL_StatusTypeDef BMS_ADC_Read_Temperature(BMS_TypeDef* bms){
 #endif
 
 	// converting real value of temperature with factor and offset to achieve type of value, which is ready to be sent via CAN1
-	if(BMS_CAN_ScallingParams(bms, ADC_TEMP_CH, &temperature_f) != HAL_OK){
+ 	if(BMS_CAN_ScallingParams(bms, ADC_TEMP_CH, &temperature_f) != HAL_OK){
 		return HAL_ERROR;
 	}
 

@@ -23,7 +23,7 @@
 /* Variables ---------------------------------------------------------------------------------  */
 extern uint32_t lastTick;
 extern uint32_t pwmStartupStart;
-
+uint32_t then;
 /* Functions' bodies -------------------------------------------------------------------------  */
 
 /*
@@ -33,6 +33,9 @@ extern uint32_t pwmStartupStart;
 */
 
 HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_HandleTypeDef* bhcan2, ADC_HandleTypeDef* hadc, UART_HandleTypeDef* huart, TIM_HandleTypeDef* htim){
+
+	// reading current tick for LEDs blinkink
+	then = HAL_GetTick();
 
 	// assigning handle objects
 	bms->bmsADC.hadc        = hadc;
@@ -115,7 +118,6 @@ HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms){
 	// Send Data via CAN
 	CAN_HandleScheduled(bms->bmsCAN.bhcan1, &bms->bmsCAN.CAN1_Buff);
 
-
 	// Handle PWM generation
 	if(BMS_PWM_NormalMode(bms) != HAL_OK){
 		return HAL_ERROR;
@@ -146,7 +148,6 @@ HAL_StatusTypeDef BMS_Mode_Error(BMS_TypeDef* bms){
 		// saving status
 		bms->prevStatus = BMS_Error;
 	}
-
 
 	// Handling PWM generation in error/sleep mode
 	if(BMS_PWM_SleepMode(bms) != HAL_OK){
@@ -351,12 +352,11 @@ void BMS_Mode_LEDBlink(BMS_TypeDef* bms){
 
 
 	// init variable which stores current tick
-	static uint32_t now;
-	now = HAL_GetTick();
+
 
 	// checking if correct ammout of time passed to Toggle LED state
 
-	if(now - lastTick >= 500){
+	if(HAL_GetTick() - then >= 500){
 
 		switch(bms->status){
 
@@ -385,7 +385,7 @@ void BMS_Mode_LEDBlink(BMS_TypeDef* bms){
 		}
 
 		// updating tick
-		lastTick = now;
+		then = HAL_GetTick();
 
 	}
 }

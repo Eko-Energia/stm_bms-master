@@ -21,7 +21,7 @@
 #define BMS_PWM_H_
 
 #ifdef __cplusplus
- extern 'C'{
+extern "C" {
 #endif
 
 
@@ -87,7 +87,7 @@ HAL_StatusTypeDef BMS_PWM_NormalMode(BMS_TypeDef* bms);
 HAL_StatusTypeDef BMS_PWM_SleepMode(BMS_TypeDef* bms);
 
 #ifdef __cplusplus
- 	 }
+}
 #endif
 
-#endif /* INC_BMS_TYPES_H_ */
+#endif /* BMS_PWM_H_ */
