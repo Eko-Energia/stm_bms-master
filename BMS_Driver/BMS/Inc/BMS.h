@@ -19,8 +19,6 @@
 #ifndef INC_BMS_H_
 #define INC_BMS_H_
 
-#pragma once
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -89,14 +87,6 @@ HAL_StatusTypeDef BMS_Mode_Change(BMS_TypeDef* bms, BMS_StatusTypeDef_e status);
   * @retval HAL_OK on success, HAL_ERROR on failure
   */
 HAL_StatusTypeDef BMS_Log_Data(BMS_TypeDef* bms);
-
-/*
-  * @brief  Changes BMS status (legacy / alternate status switch API)
-  * @param  bms    Pointer to BMS handle
-  * @param  status New BMS status to apply
-  * @retval HAL_OK on success, HAL_ERROR on failure
-  */
-HAL_StatusTypeDef BMS_Status_Change(BMS_TypeDef* bms,BMS_StatusTypeDef_e status);
 
 /*
   * @brief  Blinks status LEDs according to current BMS mode

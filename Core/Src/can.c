@@ -59,12 +59,7 @@ void MX_CAN1_Init(void)
    * Enable bus-off recovery and retransmission for vehicle CAN robustness.
    * Re-init applies flags after Cube-generated defaults (may be DISABLE).
    */
-  hcan1.Init.AutoBusOff = ENABLE;
-  hcan1.Init.AutoRetransmission = ENABLE;
-  if (HAL_CAN_Init(&hcan1) != HAL_OK)
-  {
-    Error_Handler();
-  }
+
   /* USER CODE END CAN1_Init 2 */
 
 }
@@ -79,6 +74,18 @@ void MX_CAN2_Init(void)
   /* USER CODE BEGIN CAN2_Init 1 */
 
   /* USER CODE END CAN2_Init 1 */
+  /*
+   * Hard reset CAN2 peripheral before HAL_CAN_Init. A previous halted init
+   * (JTAG halt mid-sequence, prior HAL_TIMEOUT) can leave MCR/MSR in a
+   * state where SLEEP bit writes no longer clear SLAK. APB1 reset pulse
+   * forces register defaults. CAN1 clock must be enabled first because on
+   * F105 connectivity line CAN2 is a slave of CAN1 (shared filter SRAM).
+   */
+  __HAL_RCC_CAN1_CLK_ENABLE();
+  __HAL_RCC_CAN2_FORCE_RESET();
+  __HAL_RCC_CAN2_RELEASE_RESET();
+  __HAL_RCC_CAN2_CLK_ENABLE();
+
   hcan2.Instance = CAN2;
   hcan2.Init.Prescaler = 4;
   hcan2.Init.Mode = CAN_MODE_NORMAL;
@@ -87,7 +94,13 @@ void MX_CAN2_Init(void)
   hcan2.Init.TimeSeg2 = CAN_BS2_4TQ;
   hcan2.Init.TimeTriggeredMode = DISABLE;
   hcan2.Init.AutoBusOff = DISABLE;
-  hcan2.Init.AutoWakeUp = ENABLE;
+  /*
+   * AWUM must be DISABLE on a bench setup. With AWUM=1 bxCAN only leaves
+   * Sleep on detected bus activity; a silent bus (dongle unplugged) leaves
+   * SLAK=1 forever and HAL_CAN_Init returns HAL_ERROR.
+   * Ref RM0008 §24.4.3.
+   */
+  hcan2.Init.AutoWakeUp = DISABLE;
   hcan2.Init.AutoRetransmission = DISABLE;
   hcan2.Init.ReceiveFifoLocked = DISABLE;
   hcan2.Init.TransmitFifoPriority = DISABLE;
@@ -96,19 +109,7 @@ void MX_CAN2_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN CAN2_Init 2 */
-  /*
-   * Same robustness settings as CAN1 (AutoBusOff + AutoRetransmission).
-   * AutoWakeUp left DISABLE: AWUM during leave-init has been seen to keep
-   * CAN2 in INAK on F105. Re-init after Cube defaults so regenerate does
-   * not drop these flags.
-   */
-  hcan2.Init.AutoBusOff = ENABLE;
-  hcan2.Init.AutoRetransmission = ENABLE;
-  hcan2.Init.AutoWakeUp = DISABLE;
-  if (HAL_CAN_Init(&hcan2) != HAL_OK)
-  {
-    Error_Handler();
-  }
+
   /* USER CODE END CAN2_Init 2 */
 
 }
@@ -189,9 +190,6 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-    /* CAN2 interrupt Init */
-    HAL_NVIC_SetPriority(CAN2_RX0_IRQn, 2, 0);
-    HAL_NVIC_EnableIRQ(CAN2_RX0_IRQn);
   /* USER CODE BEGIN CAN2_MspInit 1 */
     GPIO_InitStruct.Pin = GPIO_PIN_12;
     GPIO_InitStruct.Mode = GPIO_MODE_INPUT;

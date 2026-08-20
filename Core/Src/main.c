@@ -28,7 +28,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "BMS.h"
-
+#include "BMS_PWM.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -106,6 +106,14 @@ int main(void)
   MX_NVIC_Init();
   /* USER CODE BEGIN 2 */
 
+  /*
+   * Minimal 50 % / ~500 Hz square wave on PB0 (TIM3_CH3).
+   * Standalone call — does not depend on BMS_Init succeeding.
+   * PB0 was already configured as AF push-pull by HAL_TIM_MspPostInit
+   * from MX_TIM3_Init above.
+   */
+  hcan2.Instance->MCR &= ~(0x1);
+   hcan2.Instance->MCR |= (1 << 1);
 
   /*BMS---------------------------------------------------------*/
   /* Init BMS object + start CAN/ADC/PWM/EH. On failure enter error mode. */
@@ -118,9 +126,10 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
+
+
   // reading current tick of firmware
   lastTick = HAL_GetTick();
-
   while (1)
   {
 	  /* Status LED blink (green = normal, red = error) */
@@ -209,6 +218,9 @@ static void MX_NVIC_Init(void)
   /* DMA1_Channel1_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 3, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
+  /* CAN2_RX0_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(CAN2_RX0_IRQn, 2, 0);
+  HAL_NVIC_EnableIRQ(CAN2_RX0_IRQn);
 }
 
 /* USER CODE BEGIN 4 */

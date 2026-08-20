@@ -23,7 +23,7 @@
 
 /* General */
 #include "main.h"
-#include "string.h"
+#include <string.h>
 
 /* Drivers */
 #include "adc_driver.h"

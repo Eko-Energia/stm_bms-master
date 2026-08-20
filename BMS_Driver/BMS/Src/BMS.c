@@ -23,7 +23,7 @@
 /* Variables ---------------------------------------------------------------------------------  */
 extern uint32_t lastTick;
 extern uint32_t pwmStartupStart;
-uint32_t then;
+static uint32_t s_ledLastTick;			/*< Last tick when status LED was toggled (module-private) >*/
 /* Functions' bodies -------------------------------------------------------------------------  */
 
 /*
@@ -35,7 +35,7 @@ uint32_t then;
 HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_HandleTypeDef* bhcan2, ADC_HandleTypeDef* hadc, UART_HandleTypeDef* huart, TIM_HandleTypeDef* htim){
 
 	// reading current tick for LEDs blinkink
-	then = HAL_GetTick();
+	s_ledLastTick = HAL_GetTick();
 
 	// assigning handle objects
 	bms->bmsADC.hadc        = hadc;
@@ -54,6 +54,24 @@ HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_Han
 	/* Clear full CAN2 thermistor matrix [7 PCBs][9 therms] — sizeof whole array, not one byte/row */
 	memset(bms->bmsCAN.CAN2_temperatureCells, 0, sizeof(bms->bmsCAN.CAN2_temperatureCells));
 
+	/* Zero CAN1 scheduled TX list (size/txMailbox/callbacks) before EH_init consumes it */
+	memset(&bms->bmsCAN.CAN1_Buff, 0, sizeof(bms->bmsCAN.CAN1_Buff));
+
+	/*
+	 * PWM MUST be brought up before any other peripheral.
+	 * Relay control is safety-critical — if BMS_CAN_Init or BMS_ADC_Init later
+	 * fails and we bail out of BMS_Init, the timer must already be running so
+	 * the relay driver sees a live PWM (previous order left PB0 stuck at 0 V
+	 * whenever CAN init failed).
+	 */
+	if(BMS_PWM_Init(bms, htim) != HAL_OK){
+		return HAL_ERROR;
+	}
+	if(BMS_PWM_ChandeMode(bms, PWM_Startup) != HAL_OK){
+		return HAL_ERROR;
+	}
+	pwmStartupStart = HAL_GetTick();
+
 	// Launching CAN1 and CAN2
 	if(BMS_CAN_Init(bms) != HAL_OK){
 		return HAL_ERROR;
@@ -63,14 +81,6 @@ HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_Han
 	if(BMS_ADC_Init(bms) != HAL_OK){
 		return HAL_ERROR;
 	}
-
-	// Initialization of TIM (PWM)
-	if(BMS_PWM_Init(bms, htim) != HAL_OK){
-		return HAL_ERROR;
-	}
-
-	// updating tick for pwm startup phase
-	pwmStartupStart = HAL_GetTick();
 
 	// Init EH
     EH_init(&bms->beh, bms->bmsCAN.bhcan1, BMS_NODE, &(bms->bmsCAN.CAN1_Buff));
@@ -159,21 +169,19 @@ HAL_StatusTypeDef BMS_Mode_Error(BMS_TypeDef* bms){
 
 HAL_StatusTypeDef BMS_Mode_Change(BMS_TypeDef* bms, BMS_StatusTypeDef_e status){
 
-	// checking if change of mode occurred
-	if(bms->prevStatus != BMS_Error){
-
-		// Stop peripherals
-		if(BMS_Stop_Peripherals(bms) != HAL_OK){
-			return HAL_ERROR;
-		}
-
+	if(NULL == bms){
+		return HAL_ERROR;
 	}
 
-	// saving previous status
+	/*
+	 * State-transition-only.
+	 * Stop/start of peripherals is owned by BMS_Mode_Normal / BMS_Mode_Error,
+	 * which trigger it exactly once on prevStatus edge.
+	 * Doing it here as well caused HAL_ADC_Stop() to be called on an already
+	 * stopped ADC in the next loop iteration and returned HAL_ERROR.
+	 */
 	bms->prevStatus = bms->status;
-
-	// overwriting current BMS's status
-	bms->status = status;
+	bms->status     = status;
 
 	return HAL_OK;
 }
@@ -193,13 +201,17 @@ HAL_StatusTypeDef BMS_Log_Data(BMS_TypeDef* bms){
 
 HAL_StatusTypeDef BMS_Start_Peripherals(BMS_TypeDef* bms){
 
+	if(NULL == bms){
+		return HAL_ERROR;
+	}
+
 /*
 	 ==============================================================================
 	                       ##### LAUNCHING ADC #####
 	 ==============================================================================
 */
 
-	// Launching ADC for BMS — fail must return HAL_ERROR (do not swallow)
+	/* Restart ADC DMA stream (ADC_Init programs channels + starts DMA). */
 	if(ADC_Init(bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1) != HAL_OK){
 		return HAL_ERROR;
 	}
@@ -210,23 +222,26 @@ HAL_StatusTypeDef BMS_Start_Peripherals(BMS_TypeDef* bms){
 	 ==============================================================================
 */
 
-	// Launching CAN for BMS
-	if(BMS_CAN_Init(bms) != HAL_OK){
-		return HAL_ERROR;
-	}
-
-	// Checking if CAN1 is in sleep mode, if yes, then wake up CAN1
+	/*
+	 * Do NOT call BMS_CAN_Init here — filters are already programmed by BMS_Init
+	 * and reprogramming them at runtime forces both controllers into FINIT,
+	 * causing a brief RX outage on CAN1. Just resume from sleep and re-arm RX IRQ.
+	 */
 	if(HAL_CAN_IsSleepActive(bms->bmsCAN.bhcan1)){
 		if(HAL_CAN_WakeUp(bms->bmsCAN.bhcan1) != HAL_OK){
 			return HAL_ERROR;
 		}
 	}
 
-	// Checking if CAN2 is in sleep mode, if yes, then wake up CAN2
 	if(HAL_CAN_IsSleepActive(bms->bmsCAN.bhcan2)){
 		if(HAL_CAN_WakeUp(bms->bmsCAN.bhcan2) != HAL_OK){
 			return HAL_ERROR;
 		}
+	}
+
+	/* Re-enable RX FIFO0 notification on CAN2 (deactivated by BMS_Stop_Peripherals) */
+	if(HAL_CAN_ActivateNotification(bms->bmsCAN.bhcan2, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK){
+		return HAL_ERROR;
 	}
 
 	return HAL_OK;
@@ -235,18 +250,22 @@ HAL_StatusTypeDef BMS_Start_Peripherals(BMS_TypeDef* bms){
 
 HAL_StatusTypeDef BMS_Stop_Peripherals(BMS_TypeDef* bms){
 
+	if(NULL == bms){
+		return HAL_ERROR;
+	}
+
 /*
 	 ==============================================================================
 						   ##### STOPPING ADC #####
 	 ==============================================================================
 */
 
-	// Stopping ADC peripheral workflow for BMS in Standby or Error Mode
-	if(HAL_ADC_Stop(bms->bmsADC.hadc) != HAL_OK){
-		return HAL_ERROR;
-	}
-
-	/* Stop ADC DMA stream — failure must propagate as HAL_ERROR */
+	/*
+	 * For DMA-driven ADC we must call ONLY HAL_ADC_Stop_DMA — it stops both
+	 * conversions and the DMA stream and moves the state machine to READY.
+	 * Calling HAL_ADC_Stop() first would flip the state and make the following
+	 * HAL_ADC_Stop_DMA() return HAL_ERROR (state != BUSY_INTERNAL).
+	 */
 	if(HAL_ADC_Stop_DMA(bms->bmsADC.hadc) !=  HAL_OK){
 		return HAL_ERROR;
 	}
@@ -350,18 +369,18 @@ HAL_StatusTypeDef BMS_FAN_Control(BMS_TypeDef* bms){
 
 void BMS_Mode_LEDBlink(BMS_TypeDef* bms){
 
+	if(NULL == bms){
+		return;
+	}
 
-	// init variable which stores current tick
-
-
-	// checking if correct ammout of time passed to Toggle LED state
-
-	if(HAL_GetTick() - then >= 500){
+	/* Unsigned tick delta — wraparound safe */
+	if(HAL_GetTick() - s_ledLastTick >= BMS_LED_PERIOD){
 
 		switch(bms->status){
 
 			// executing blinking for normal BMS's state
 			case BMS_NORMAL:
+
 				// Toggling GREEN LED
 				HAL_GPIO_TogglePin(GREEN_LD_GPIO_Port, GREEN_LD_Pin);
 
@@ -385,7 +404,7 @@ void BMS_Mode_LEDBlink(BMS_TypeDef* bms){
 		}
 
 		// updating tick
-		then = HAL_GetTick();
+		s_ledLastTick = HAL_GetTick();
 
 	}
 }

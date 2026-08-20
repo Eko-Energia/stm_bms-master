@@ -28,8 +28,13 @@ HAL_StatusTypeDef BMS_PWM_Init(BMS_TypeDef* bms, TIM_HandleTypeDef* htim){
 		return HAL_ERROR;
 	}
 
-	// Initializing out signal for PWM generation
-	PWM_Out_Init(&bms->bpwm.htim, htim, TIM_CH3, RELAY_STARTUP_DUTY, RELAY_STARTUP_FREQ);
+	/*
+	 * Propagate failure — silent PWM start was the root cause of "PB0 stuck at 0 V":
+	 * with CCR3=0 (Cube default) and CEN never set, PWM1 output stays LOW forever.
+	 */
+	if(PWM_Out_Init(&bms->bpwm.htim, htim, TIM_CH3, RELAY_STARTUP_DUTY, RELAY_STARTUP_FREQ) != HAL_OK){
+		return HAL_ERROR;
+	}
 
 	return HAL_OK;
 }

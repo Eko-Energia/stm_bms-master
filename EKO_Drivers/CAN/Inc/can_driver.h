@@ -8,6 +8,7 @@
 #ifndef CAN_DRIVER_H
 #define CAN_DRIVER_H
 
+#include "can_id_list.h"
 #include "main.h"
 #include <stdio.h>
 #include "string.h"
@@ -20,10 +21,32 @@
 #define CAN_MAX_MSG (32)
 
 /**
- * @brief Generic macro to swap endianness based on variable type.~
+ * Automatic retransmission (bxCAN NART bit), applied by CAN_Init().
  *
- * Endiannes should be handlend in GetData function of every
- * * usage:
+ * 1 = enabled (default) - the peripheral retries a frame that lost arbitration
+ *                         or hit a bus error until it is acknowledged.
+ * 0 = disabled          - a frame is transmitted once; a failed frame is dropped
+ *                         and its mailbox is released immediately.
+ *
+ * @note With retransmission enabled a frame that is never acknowledged (no other
+ * node on the bus, missing termination, bit timing mismatch) occupies its mailbox
+ * indefinitely. bxCAN has only 3 TX mailboxes, so three such frames block every
+ * further transmission. CAN_HandleScheduled() recovers via CAN_TX_FAIL_LIMIT.
+ */
+#define CAN_AUTO_RETRANSMISSION (1U)
+
+/**
+ * Consecutive failed enqueue attempts of a single scheduled message before
+ * CAN_HandleScheduled() aborts all pending TX requests to unblock the mailboxes.
+ * Counts periods, not loop iterations. Set to 0 to disable the recovery.
+ */
+#define CAN_TX_FAIL_LIMIT (3U)
+
+/**
+ * @brief Generic macro to swap endianness based on variable type.~
+ * 
+ * Endiannes should be handlend in GetData function of every 
+ * * usage: 
  * uint32_t val = 0x12345678;
  * val = SWAP_ENDIANNESS(val); // Becomes 0x78563412
  */
@@ -57,6 +80,7 @@ struct CAN_scheduledMsg
 	uint32_t lastTick;              // time stamp of the last message
 	void (*getData)(uint8_t *data, void *context); // fetches data
 	void *context;                  // user callback context
+	uint32_t txFailCount;           // consecutive failed enqueue attempts, managed by the driver
 };
 
 /**
@@ -86,6 +110,8 @@ struct CAN_IncomingMsgList
 	struct CAN_IncomingMsg list[CAN_MAX_MSG];
 	uint8_t count;
 	uint8_t receiveFlag;
+	uint8_t head;
+	uint8_t tail;
 };
 
 /**
@@ -93,20 +119,7 @@ struct CAN_IncomingMsgList
  */
 
 /**
- * @brief Program CAN2 slave RX filter banks (lives in CAN1 on F105).
- *
- * Must be called while both CAN handles are still READY — before any
- * HAL_CAN_Start(). No-op if hcanPtr is not CAN2.
- *
- * @param hcanPtr   Pointer to CAN2 handle
- */
-void CAN_ConfigRxFilters(CAN_HandleTypeDef *hcanPtr);
-
-/**
- * @brief Start CAN peripheral (and CAN2 RX FIFO0 notification).
- *
- * Idempotent: if the handle is already LISTENING, Start is skipped.
- * Call CAN_ConfigRxFilters() on CAN2 before starting either instance.
+ * @brief Initialize CAN peripheral
  *
  * @param hcanPtr   Pointer to CAN handle
  */
@@ -131,7 +144,7 @@ void CAN_HandleScheduled(CAN_HandleTypeDef *hcanPtr, struct CAN_scheduledMsgList
  * @param buffer   Pointer to the buffer that holds messages
  * @retval HAL_StatusTypeDef   State of the operation
  */
-HAL_StatusTypeDef CAN_AddScheduledMsg(const struct CAN_scheduledMsg *msg, struct CAN_scheduledMsgList *buffer);
+HAL_StatusTypeDef CAN_AddScheduledMsg(struct CAN_scheduledMsg *msg, struct CAN_scheduledMsgList *buffer);
 
 /**
  * @brief Remove message from the periodic buffer

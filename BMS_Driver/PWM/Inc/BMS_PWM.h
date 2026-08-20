@@ -15,7 +15,7 @@
   *
   ******************************************************************************
   */
-
+#pragma once
 
 #ifndef BMS_PWM_H_
 #define BMS_PWM_H_
@@ -36,11 +36,11 @@ extern "C" {
 
 //< --------------------------------- STARTUP STAGE (2s) ----------------------------------
 #define RELAY_STARTUP_DUTY     (100)			//< Duty cycle for generated signal at startup          [%]
-#define RELAY_STARTUP_FREQ     (1000)			//< Frequency of generated signal at startup mode       [Hz]
+#define RELAY_STARTUP_FREQ     (10000)			//< Frequency of generated signal at startup mode       [Hz]
 
 //< --------------------------------- OPERATIONAL STAGE -----------------------------------
 #define RELAY_OPERATIONAL_DUTY (50)			    //< Duty cycle for generated signal at operational mode [%]
-#define RELAY_OPERATIONAL_FREQ (1000)			//< Frequency of generated signal at operational mode   [Hz]
+#define RELAY_OPERATIONAL_FREQ (10000)			//< Frequency of generated signal at operational mode   [Hz]
 
 
 /* Variables  ------------------------------------------------------------------------------  */

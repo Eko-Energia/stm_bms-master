@@ -27,22 +27,45 @@ static uint8_t 			   rxData[8] = {0};				    //< Init data storage for Rx frame'
 /* Functions' bodies -------------------------------------------------*/
 HAL_StatusTypeDef BMS_CAN_Init(BMS_TypeDef* bms){
 
-	/* nSTBY low = transceiver normal mode (idle bus recessive) */
-	HAL_GPIO_WritePin(nCAN1_Stby_GPIO_Port, nCAN1_Stby_Pin, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(nCAN2_Stby_GPIO_Port, nCAN2_Stby_Pin, GPIO_PIN_RESET);
+	/*
+	 * Transceiver enable pin polarity — override at build time if the actual
+	 * chip on the board uses active-HIGH enable (e.g. TJA1051T/3, TJA1042: STB
+	 * pin where HIGH = normal, LOW = standby). Default is active-LOW to match
+	 * the "nSTBY" schematic naming.
+	 */
+#ifndef CAN_STBY_ACTIVE_LEVEL
+#define CAN_STBY_ACTIVE_LEVEL GPIO_PIN_RESET   /* LOW asserts "normal mode" */
+#endif
+	HAL_GPIO_WritePin(nCAN1_Stby_GPIO_Port, nCAN1_Stby_Pin, CAN_STBY_ACTIVE_LEVEL);
+	HAL_GPIO_WritePin(nCAN2_Stby_GPIO_Port, nCAN2_Stby_Pin, CAN_STBY_ACTIVE_LEVEL);
+
+	/*
+	 * Transceiver wake-up window. Most CAN transceivers (TJA1050/1051, MCP2551,
+	 * SN65HVD230, etc.) need up to a few hundred µs after leaving standby
+	 * before the RX pin becomes valid recessive. Bumped to 10 ms because a
+	 * shorter wait sometimes lets PB12 still be LOW when HAL_CAN_Start samples
+	 * the bus, causing HAL_TIMEOUT (INAK stuck).
+	 */
+	HAL_Delay(10);
 
 	/* CAN2 filter SRAM lives in CAN1 — master clock before either Start */
 	__HAL_RCC_CAN1_CLK_ENABLE();
 	__HAL_RCC_CAN2_CLK_ENABLE();
 
 	/*
-	 * F105 dual-CAN: program CAN2SB + slave banks while both handles are still
-	 * READY, then start CAN1 (master) before CAN2. ConfigFilter after CAN1 is
-	 * LISTENING can leave CAN2 stuck in INAK inside HAL_CAN_Start().
+	 * F105 dual-CAN order rationale:
+	 *  1. Program CAN2SB + slave-side filter banks NOW, while both handles are
+	 *     still READY. HAL_CAN_ConfigFilter briefly asserts CAN1.FMR.FINIT,
+	 *     which halts frame acceptance on BOTH controllers for the duration
+	 *     of the write. Doing it after CAN1 is LISTENING causes a short
+	 *     RX-dropout on CAN1 (visible as missed vehicle frames), so we
+	 *     program filters here to avoid it.
+	 *  2. Start CAN1 (master) first, then CAN2 — this order matters for the
+	 *     shared-clock domain but does NOT influence INAK. INAK on CAN2
+	 *     clears solely on 11 recessive bits observed on PB12 after INRQ=0.
 	 */
-	CAN_ConfigRxFilters(bms->bmsCAN.bhcan2);
 	CAN_Init(bms->bmsCAN.bhcan1);
-	//CAN_Init(bms->bmsCAN.bhcan2);
+	CAN_Init(bms->bmsCAN.bhcan2);
 
 	/* Re-entry from BMS_Start_Peripherals must not duplicate scheduled IDs */
 	if(bms->bmsCAN.CAN1_Buff.size == 0U){
@@ -314,7 +337,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan){
 		if(HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &RxHeader, rxData) == HAL_OK){
 
 			// setting flag to proceed received frame
-			rxMsgReceived = 1;
+ 			rxMsgReceived = 1;
 
 		}
 	}
