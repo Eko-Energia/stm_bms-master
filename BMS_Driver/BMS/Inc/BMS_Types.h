@@ -103,12 +103,11 @@ typedef struct{
   */
 typedef struct{
 
-	CAN_HandleTypeDef*   bhcan1;													/*<CAN1 handle used in BMS's firmware | sending   data via CAN1>*/
-	CAN_HandleTypeDef*   bhcan2;													/*<CAN2 handle used in BMS's firmware | receiving data via CAN2>*/
+	CAN_HandleTypeDef*   bhcan1;													/*<CAN1 handle used in BMS's firmware | TX scheduled frames + RX thermistor frames>*/
 
 	struct CAN_scheduledMsgList CAN1_Buff;											/*<CAN1 frames buffer>*/
 
-	uint8_t 			 CAN2_temperatureCells[7][9];								/*<CAN2's received value (ready to send via CAN1) buff>*/
+	uint8_t 			 CAN2_temperatureCells[7][9];								/*<Received thermistor values (via CAN1 RX) — matrix kept under legacy name>*/
 
 }CAN_BMSTypeDef;
 

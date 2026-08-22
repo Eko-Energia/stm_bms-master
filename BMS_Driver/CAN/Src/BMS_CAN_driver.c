@@ -37,35 +37,18 @@ HAL_StatusTypeDef BMS_CAN_Init(BMS_TypeDef* bms){
 #define CAN_STBY_ACTIVE_LEVEL GPIO_PIN_RESET   /* LOW asserts "normal mode" */
 #endif
 	HAL_GPIO_WritePin(nCAN1_Stby_GPIO_Port, nCAN1_Stby_Pin, CAN_STBY_ACTIVE_LEVEL);
-	HAL_GPIO_WritePin(nCAN2_Stby_GPIO_Port, nCAN2_Stby_Pin, CAN_STBY_ACTIVE_LEVEL);
 
 	/*
 	 * Transceiver wake-up window. Most CAN transceivers (TJA1050/1051, MCP2551,
 	 * SN65HVD230, etc.) need up to a few hundred µs after leaving standby
-	 * before the RX pin becomes valid recessive. Bumped to 10 ms because a
-	 * shorter wait sometimes lets PB12 still be LOW when HAL_CAN_Start samples
-	 * the bus, causing HAL_TIMEOUT (INAK stuck).
+	 * before the RX pin becomes valid recessive.
 	 */
 	HAL_Delay(10);
 
-	/* CAN2 filter SRAM lives in CAN1 — master clock before either Start */
 	__HAL_RCC_CAN1_CLK_ENABLE();
-	__HAL_RCC_CAN2_CLK_ENABLE();
 
-	/*
-	 * F105 dual-CAN order rationale:
-	 *  1. Program CAN2SB + slave-side filter banks NOW, while both handles are
-	 *     still READY. HAL_CAN_ConfigFilter briefly asserts CAN1.FMR.FINIT,
-	 *     which halts frame acceptance on BOTH controllers for the duration
-	 *     of the write. Doing it after CAN1 is LISTENING causes a short
-	 *     RX-dropout on CAN1 (visible as missed vehicle frames), so we
-	 *     program filters here to avoid it.
-	 *  2. Start CAN1 (master) first, then CAN2 — this order matters for the
-	 *     shared-clock domain but does NOT influence INAK. INAK on CAN2
-	 *     clears solely on 11 recessive bits observed on PB12 after INRQ=0.
-	 */
+	/* Single CAN peripheral: TX scheduled frames + RX thermistor / safe-state frames. */
 	CAN_Init(bms->bmsCAN.bhcan1);
-	CAN_Init(bms->bmsCAN.bhcan2);
 
 	/* Re-entry from BMS_Start_Peripherals must not duplicate scheduled IDs */
 	if(bms->bmsCAN.CAN1_Buff.size == 0U){
@@ -332,7 +315,7 @@ HAL_StatusTypeDef BMS_CAN_HandleRxMsg(BMS_TypeDef *bms){
 
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan){
 
-	if(hcan->Instance == CAN2){
+	if(hcan->Instance == CAN1){
 
 		if(HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &RxHeader, rxData) == HAL_OK){
 

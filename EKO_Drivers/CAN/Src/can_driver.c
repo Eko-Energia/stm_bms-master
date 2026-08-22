@@ -25,37 +25,30 @@
 
 void CAN_Init(CAN_HandleTypeDef *hcanPtr)
 {
-
-
-	CAN_FilterTypeDef filterConfig;
-
-
-	if(hcanPtr->Instance == CAN1){
-		filterConfig.FilterBank = 0;
-		filterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
-		filterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
-		filterConfig.FilterIdHigh = 0x0000;
-		filterConfig.FilterIdLow = 0x0000;
-		filterConfig.FilterMaskIdHigh = 0x0000;
-		filterConfig.FilterMaskIdLow = 0x0000;
-		filterConfig.FilterFIFOAssignment = CAN_RX_FIFO0;
-		filterConfig.FilterActivation = ENABLE;
-		filterConfig.SlaveStartFilterBank = 14;
-
-	}else if(hcanPtr->Instance == CAN2){
-
-		filterConfig.FilterBank            = 14;      /* first CAN2 bank (SlaveStartFilterBank = 14) */
-		filterConfig.FilterMode            = CAN_FILTERMODE_IDMASK;
-		filterConfig.FilterScale           = CAN_FILTERSCALE_32BIT;
-		filterConfig.FilterIdHigh          = 0x0000;
-		filterConfig.FilterIdLow           = 0x0000;
-		filterConfig.FilterMaskIdHigh      = 0x0000;  /* mask = 0  ->  accept every ID */
-		filterConfig.FilterMaskIdLow       = 0x0000;
-		filterConfig.FilterFIFOAssignment  = CAN_RX_FIFO0;
-		filterConfig.FilterActivation      = ENABLE;
-		filterConfig.SlaveStartFilterBank  = 14;
-
+	if (hcanPtr == NULL)
+	{
+		Error_Handler();
+		return;
 	}
+
+	/*
+	 * Single-CAN configuration (CAN2 removed).
+	 * Accept-all mask on bank 0 → every incoming ID lands in FIFO0.
+	 * SlaveStartFilterBank stays at 14 for backwards-compatibility with any
+	 * future re-introduction of CAN2; it has no effect when CAN2 is disabled.
+	 */
+	CAN_FilterTypeDef filterConfig = {0};
+
+	filterConfig.FilterBank            = 0;
+	filterConfig.FilterMode            = CAN_FILTERMODE_IDMASK;
+	filterConfig.FilterScale           = CAN_FILTERSCALE_32BIT;
+	filterConfig.FilterIdHigh          = 0x0000;
+	filterConfig.FilterIdLow           = 0x0000;
+	filterConfig.FilterMaskIdHigh      = 0x0000;
+	filterConfig.FilterMaskIdLow       = 0x0000;
+	filterConfig.FilterFIFOAssignment  = CAN_RX_FIFO0;
+	filterConfig.FilterActivation      = ENABLE;
+	filterConfig.SlaveStartFilterBank  = 14;
 
 	if (HAL_CAN_ConfigFilter(hcanPtr, &filterConfig) != HAL_OK)
 	{
@@ -68,11 +61,10 @@ void CAN_Init(CAN_HandleTypeDef *hcanPtr)
 		Error_Handler();
 	}
 
-	if(hcanPtr->Instance == CAN2){
-		if (HAL_CAN_ActivateNotification(hcanPtr, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK)
-		{
-			Error_Handler();
-		}
+	/* RX FIFO0 pending IRQ — thermistor / safe-state frames handled in HAL_CAN_RxFifo0MsgPendingCallback */
+	if (HAL_CAN_ActivateNotification(hcanPtr, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK)
+	{
+		Error_Handler();
 	}
 }
 

@@ -44,14 +44,13 @@ extern uint32_t lastTick;																/*< Last SysTick value used by BMS_Mode
 /*
   * @brief  Initializes BMS object, assigns peripheral handles and starts CAN/ADC/PWM/EH
   * @param  bms    Pointer to BMS handle
-  * @param  bhcan1 Pointer to CAN1 HAL handle (TX / error reporting)
-  * @param  bhcan2 Pointer to CAN2 HAL handle (cell temperatures RX)
+  * @param  bhcan1 Pointer to CAN1 HAL handle (TX scheduled + RX thermistor frames)
   * @param  hadc   Pointer to ADC HAL handle
   * @param  huart  Pointer to UART HAL handle (logger)
   * @param  htim   Pointer to TIM HAL handle (PWM)
   * @retval HAL_OK on success, HAL_ERROR on failure
   */
-HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_HandleTypeDef* bhcan2, ADC_HandleTypeDef* hadc, UART_HandleTypeDef* huart, TIM_HandleTypeDef* htim);
+HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, ADC_HandleTypeDef* hadc, UART_HandleTypeDef* huart, TIM_HandleTypeDef* htim);
 
 /*
 	 ==============================================================================

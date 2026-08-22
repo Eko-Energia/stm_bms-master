@@ -32,7 +32,7 @@ static uint32_t s_ledLastTick;			/*< Last tick when status LED was toggled (modu
 	 ==============================================================================
 */
 
-HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_HandleTypeDef* bhcan2, ADC_HandleTypeDef* hadc, UART_HandleTypeDef* huart, TIM_HandleTypeDef* htim){
+HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, ADC_HandleTypeDef* hadc, UART_HandleTypeDef* huart, TIM_HandleTypeDef* htim){
 
 	// reading current tick for LEDs blinkink
 	s_ledLastTick = HAL_GetTick();
@@ -40,7 +40,6 @@ HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_Han
 	// assigning handle objects
 	bms->bmsADC.hadc        = hadc;
 	bms->bmsCAN.bhcan1      = bhcan1;
-	bms->bmsCAN.bhcan2      = bhcan2;
 	bms->errorLogger.huart1 = huart;
 	bms->bpwm.htim.htim 	= htim;
 
@@ -51,7 +50,7 @@ HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_Han
 	// Reset ADC scaled TX buffer (voltage / temperature / current)
 	memset(bms->bmsADC.ADC_voltTempCurr, 0 , sizeof(bms->bmsADC.ADC_voltTempCurr));
 
-	/* Clear full CAN2 thermistor matrix [7 PCBs][9 therms] — sizeof whole array, not one byte/row */
+	/* Clear thermistor matrix [7 PCBs][9 therms] — sizeof whole array, not one byte/row */
 	memset(bms->bmsCAN.CAN2_temperatureCells, 0, sizeof(bms->bmsCAN.CAN2_temperatureCells));
 
 	/* Zero CAN1 scheduled TX list (size/txMailbox/callbacks) before EH_init consumes it */
@@ -72,7 +71,7 @@ HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_Han
 	}
 	pwmStartupStart = HAL_GetTick();
 
-	// Launching CAN1 and CAN2
+	// Launching CAN1 (TX scheduled + RX thermistor frames)
 	if(BMS_CAN_Init(bms) != HAL_OK){
 		return HAL_ERROR;
 	}
@@ -120,7 +119,7 @@ HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms){
 		return HAL_ERROR;
 	}
 
-	// Handle received frames from CAN2
+	// Handle received frames from CAN1
 	if(BMS_CAN_HandleRxMsg(bms) != HAL_OK){
 		return HAL_ERROR;
 	}
@@ -233,14 +232,8 @@ HAL_StatusTypeDef BMS_Start_Peripherals(BMS_TypeDef* bms){
 		}
 	}
 
-	if(HAL_CAN_IsSleepActive(bms->bmsCAN.bhcan2)){
-		if(HAL_CAN_WakeUp(bms->bmsCAN.bhcan2) != HAL_OK){
-			return HAL_ERROR;
-		}
-	}
-
-	/* Re-enable RX FIFO0 notification on CAN2 (deactivated by BMS_Stop_Peripherals) */
-	if(HAL_CAN_ActivateNotification(bms->bmsCAN.bhcan2, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK){
+	/* Re-enable RX FIFO0 notification on CAN1 (deactivated by BMS_Stop_Peripherals) */
+	if(HAL_CAN_ActivateNotification(bms->bmsCAN.bhcan1, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK){
 		return HAL_ERROR;
 	}
 
@@ -277,13 +270,13 @@ HAL_StatusTypeDef BMS_Stop_Peripherals(BMS_TypeDef* bms){
 */
 
 
-	// Stopping CAN2 peripheral workflow for BMS in Standby or Error Mode
-	if(HAL_CAN_Stop(bms->bmsCAN.bhcan2) != HAL_OK){
+	// Stopping CAN1 peripheral workflow for BMS in Standby or Error Mode
+	if(HAL_CAN_Stop(bms->bmsCAN.bhcan1) != HAL_OK){
 		return HAL_ERROR;
 	}
 
-	// Deactivating Interrupts for CAN2
-	if(HAL_CAN_DeactivateNotification(bms->bmsCAN.bhcan2, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK){
+	// Deactivating RX FIFO0 interrupt for CAN1
+	if(HAL_CAN_DeactivateNotification(bms->bmsCAN.bhcan1, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK){
 		return HAL_ERROR;
 	}
 
