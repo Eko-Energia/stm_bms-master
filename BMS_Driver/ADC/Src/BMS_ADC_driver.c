@@ -106,11 +106,11 @@ HAL_StatusTypeDef BMS_ADC_Read_Temperature(BMS_TypeDef* bms){
 
 	// calculating voltage before voltage divider
 	if(ADC_Get_PinVoltage(bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, ADC_TEMP_CH, &voltage_f) != HAL_OK){
-		return HAL_ERROR;
+		return BMS_CAN_ScallingParams(bms, ADC_TEMP_CH, 0.0f);
 	}
 
 	if(voltage_f <= 0.05f || voltage_f >= (STM32_VCC - 0.05f)){
-		return HAL_ERROR;
+		return BMS_CAN_ScallingParams(bms, ADC_TEMP_CH, 0.0f);
 	}
 	Rt = NTC_LOWER_OHM * (STM32_VCC / voltage_f - 1.0f);
 
