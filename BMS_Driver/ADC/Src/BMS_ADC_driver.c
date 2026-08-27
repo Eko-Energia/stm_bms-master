@@ -63,8 +63,31 @@ HAL_StatusTypeDef BMS_ADC_Read_Voltage(BMS_TypeDef* bms){
 	volatile float vcc_f = ((R1 / R2) + 1.0f) * (voltage_f + 0.38f);
 	volatile float vcc_supply_f = 0.0f;
 
-	/* Continuous linear calibration fitted to all available measurements. */
-	vcc_supply_f = 58.77044f + 2.2484277f * (vcc_f - 60.0f);
+	/* Piecewise-linear calibration using the measured ADC value as input. */
+	if (vcc_f < 53.31f)
+	{
+		vcc_supply_f = 47.0f + (vcc_f - 53.31f);
+	}
+	else if (vcc_f < 59.6f)
+	{
+		vcc_supply_f = 47.0f + (vcc_f - 53.31f) * 1.7488076f;
+	}
+	else if (vcc_f < 60.5f)
+	{
+		vcc_supply_f = 58.0f + (vcc_f - 59.6f) * 2.2222222f;
+	}
+	else if (vcc_f < 60.8f)
+	{
+		vcc_supply_f = 60.0f + (vcc_f - 60.5f) * 1.6666667f;
+	}
+	else if (vcc_f < 61.0f)
+	{
+		vcc_supply_f = 60.5f + (vcc_f - 60.8f) * 2.5f;
+	}
+	else
+	{
+		vcc_supply_f = vcc_f;
+	}
 
 
 	// scaling real value with factor and offset
