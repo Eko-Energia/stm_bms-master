@@ -51,23 +51,20 @@ HAL_StatusTypeDef BMS_ADC_ReadValues(BMS_TypeDef* bms){
 
 HAL_StatusTypeDef BMS_ADC_Read_Voltage(BMS_TypeDef* bms){
 
-	float voltage_f = 0.0f; // real type of voltage on PC2
+	volatile float voltage_f = 0.0f; // real type of voltage on PC2
+	volatile HAL_StatusTypeDef voltage_read_status;
 
 	// calculating real value of voltage
-	if(ADC_Get_PinVoltage(bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, ADC_CHANNEL_12, &voltage_f) != HAL_OK){
+	voltage_read_status = ADC_Get_PinVoltage(bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, ADC_CHANNEL_12, (float *)&voltage_f);
+	if(voltage_read_status != HAL_OK){
 		return HAL_ERROR;
 	}
 
-	float vcc_f = ((R1 / R2) + 1.0f) * (voltage_f + 0.38f);
-	float vcc_supply_f = 0.0f;
+	volatile float vcc_f = ((R1 / R2) + 1.0f) * (voltage_f + 0.38f);
+	volatile float vcc_supply_f = 0.0f;
 
-	/* Continuous fourth-order calibration fitted to the measured voltages. */
-	float interpolation_offset_f = vcc_f - 59.5f;
-	vcc_supply_f = 57.5f
-		+ 5.0f * interpolation_offset_f
-		- 2.7777778f * interpolation_offset_f * (vcc_f - 59.6f)
-		+ 1.7806268f * interpolation_offset_f * (vcc_f - 59.6f) * (vcc_f - 60.5f)
-		- 0.17297517f * interpolation_offset_f * (vcc_f - 59.6f) * (vcc_f - 60.5f) * (vcc_f - 60.8f);
+	/* Continuous linear calibration fitted to all available measurements. */
+	vcc_supply_f = 58.77044f + 2.2484277f * (vcc_f - 60.0f);
 
 
 	// scaling real value with factor and offset
