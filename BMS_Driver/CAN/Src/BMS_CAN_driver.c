@@ -180,23 +180,23 @@ uint8_t BMS_CAN_GetLSB(uint16_t value){
 }
 
 
-HAL_StatusTypeDef BMS_CAN_ScallingParams(BMS_TypeDef* bms, uint8_t channel, float* value_f){
+HAL_StatusTypeDef BMS_CAN_ScallingParams(BMS_TypeDef* bms, uint8_t channel, float value_f){
 
 	switch(channel){
 		case ADC_VOLTAGE_CH:
 
 			// calculating binary type of read voltage with factor and offset
-			bms->bmsADC.ADC_voltTempCurr[0] = (*value_f + VOLTAGE_OFFSET)     / VOLTAGE_GAIN;
+			bms->bmsADC.ADC_voltTempCurr[0] = (value_f + VOLTAGE_OFFSET)     / VOLTAGE_GAIN;
 			break;
 		case ADC_CURRENT_CH:
 
 			// calculating binary type of read current with factor and offset
-			bms->bmsADC.ADC_voltTempCurr[2] = (*value_f + CURRENT_OFFSET)     / CURRENT_GAIN;
+			bms->bmsADC.ADC_voltTempCurr[2] = (value_f + CURRENT_OFFSET)     / CURRENT_GAIN;
 			break;
 		case ADC_TEMP_CH:
 
 			// calculating binary type of read temperature with factor and offset
-			bms->bmsADC.ADC_voltTempCurr[1] = (*value_f + TEMPERATURE_OFFSET) / TEMPERATURE_GAIN;
+			bms->bmsADC.ADC_voltTempCurr[1] = (value_f + TEMPERATURE_OFFSET) / TEMPERATURE_GAIN;
 			break;
 		default:
 

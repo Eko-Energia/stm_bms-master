@@ -17,11 +17,6 @@
 #include "BMS_ADC_driver.h"
 #include "BMS_CAN_driver.h"
 
-static float BMS_ADC_Round2(float v){
-	int32_t c = (int32_t)((v >= 0.0f) ? (v * 100.0f + 0.5f) : (v * 100.0f - 0.5f));
-	return (float)c / 100.0f;
-}
-
 HAL_StatusTypeDef BMS_ADC_Init(BMS_TypeDef* bms){
 
 
@@ -63,26 +58,20 @@ HAL_StatusTypeDef BMS_ADC_Read_Voltage(BMS_TypeDef* bms){
 		return HAL_ERROR;
 	}
 
-	float vcc_f = ((R1 / R2) + 1.0f) * voltage_f * BMS_VPACK_SCALE;
+	float vcc_f = ((R1 / R2) + 1.0f) * (voltage_f + 0.38f);
+	float vcc_supply_f = 0.0f;
 
-	static float vcc_lp = 0.0f;
-	static float vcc_shown = 0.0f;
-	static uint8_t vcc_lp_primed = 0U;
-	if(0U == vcc_lp_primed){
-		vcc_lp = vcc_f;
-		vcc_shown = BMS_ADC_Round2(vcc_f);
-		vcc_lp_primed = 1U;
-	}else{
-		vcc_lp += (vcc_f - vcc_lp) * BMS_VPACK_LP_ALPHA;
-		if((vcc_lp - vcc_shown) >= BMS_VPACK_HOLD_V ||
-		   (vcc_shown - vcc_lp) >= BMS_VPACK_HOLD_V){
-			vcc_shown = BMS_ADC_Round2(vcc_lp);
-		}
-	}
-	vcc_f = vcc_shown;
+	/* Continuous fourth-order calibration fitted to the measured voltages. */
+	float interpolation_offset_f = vcc_f - 59.5f;
+	vcc_supply_f = 57.5f
+		+ 5.0f * interpolation_offset_f
+		- 2.7777778f * interpolation_offset_f * (vcc_f - 59.6f)
+		+ 1.7806268f * interpolation_offset_f * (vcc_f - 59.6f) * (vcc_f - 60.5f)
+		- 0.17297517f * interpolation_offset_f * (vcc_f - 59.6f) * (vcc_f - 60.5f) * (vcc_f - 60.8f);
+
 
 	// scaling real value with factor and offset
-	if(BMS_CAN_ScallingParams(bms, ADC_VOLTAGE_CH, &vcc_f) != HAL_OK){
+	if(BMS_CAN_ScallingParams(bms, ADC_VOLTAGE_CH, vcc_supply_f) != HAL_OK){
 		return HAL_ERROR;
 	}
 
@@ -92,7 +81,7 @@ HAL_StatusTypeDef BMS_ADC_Read_Voltage(BMS_TypeDef* bms){
 HAL_StatusTypeDef BMS_ADC_Read_Temperature(BMS_TypeDef* bms){
 
 	float voltage_f     = 0.0f;		// real value of voltage on stm32's pin: PC0
-	volatile float Rt            = 0.0f;		// resistance of thermistor
+	volatile float Rt   = 0.0f;		// resistance of thermistor
 	float temperature_f = 0.0f;		// calculated temperature
 
 	// calculating voltage before voltage divider
@@ -100,13 +89,6 @@ HAL_StatusTypeDef BMS_ADC_Read_Temperature(BMS_TypeDef* bms){
 		return HAL_ERROR;
 	}
 
-	/*
-	 * Divider: VCC -- NTC -- ADC(PC0) -- 10 kΩ -- GND
-	 * Heating the NTC drops Rt, Vpin rises, T must rise.
-	 * (The inverted pull-up form made T fall to ~5 °C under hot air.)
-	 * Vpin = VCC * Rlower / (Rt + Rlower)
-	 * Rt   = Rlower * (VCC / Vpin - 1)
-	 */
 	if(voltage_f <= 0.05f || voltage_f >= (STM32_VCC - 0.05f)){
 		return HAL_ERROR;
 	}
@@ -127,7 +109,7 @@ HAL_StatusTypeDef BMS_ADC_Read_Temperature(BMS_TypeDef* bms){
 #endif
 
 	// converting real value of temperature with factor and offset to achieve type of value, which is ready to be sent via CAN1
- 	if(BMS_CAN_ScallingParams(bms, ADC_TEMP_CH, &temperature_f) != HAL_OK){
+ 	if(BMS_CAN_ScallingParams(bms, ADC_TEMP_CH, temperature_f) != HAL_OK){
 		return HAL_ERROR;
 	}
 
@@ -149,7 +131,7 @@ HAL_StatusTypeDef BMS_ADC_Read_Current(BMS_TypeDef* bms){
 	current_f = ((float)current_b - 2108.0f)/4.0f;
 
 	// converting real value into value, ready to be send via CAN1
-	if(BMS_CAN_ScallingParams(bms, ADC_CURRENT_CH, &current_f) != HAL_OK){
+	if(BMS_CAN_ScallingParams(bms, ADC_CURRENT_CH, current_f) != HAL_OK){
 		return HAL_ERROR;
 	}
 

@@ -268,7 +268,7 @@ uint8_t 		  BMS_CAN_GetLSB(uint16_t value);
   * @param  value_f Pointer to engineering-unit value to scale
   * @retval HAL_OK on success, HAL_ERROR on failure
   */
-HAL_StatusTypeDef BMS_CAN_ScallingParams(BMS_TypeDef* bms, uint8_t channel, float* value_f);
+HAL_StatusTypeDef BMS_CAN_ScallingParams(BMS_TypeDef* bms, uint8_t channel, float value_f);
 
 /*
   * @brief  Handles received CAN2 frames (temps / safe-state) and updates BMS state
