@@ -123,7 +123,7 @@ struct CAN_IncomingMsgList
  *
  * @param hcanPtr   Pointer to CAN handle
  */
-void CAN_Init(CAN_HandleTypeDef *hcan);
+HAL_StatusTypeDef CAN_Init(CAN_HandleTypeDef *hcan);
 
 /**
  * Functions for scheduled messages

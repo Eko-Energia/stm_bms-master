@@ -63,30 +63,53 @@ HAL_StatusTypeDef BMS_ADC_Read_Voltage(BMS_TypeDef* bms){
 	volatile float vcc_f = ((R1 / R2) + 1.0f) * (voltage_f + 0.38f);
 	volatile float vcc_supply_f = 0.0f;
 
-	/* Piecewise-linear calibration using the measured ADC value as input. */
-	if (vcc_f < 53.31f)
+	/* Piecewise-linear calibration from measured divider voltage to pack voltage. */
+	static const float measured_vcc[] = {
+		53.31f, 59.60f, 60.50f, 60.80f, 61.00f,
+		61.20f, 61.70f, 62.00f, 62.40f, 62.80f,
+		63.10f, 63.50f, 63.80f, 64.10f, 64.40f,
+		64.70f, 65.00f, 65.30f, 65.60f, 65.80f,
+		66.10f, 66.40f, 66.60f, 66.90f, 67.10f,
+		67.30f, 67.50f, 67.80f, 68.00f, 87.00f, 89.40f
+	};
+	static const float supply_vcc[] = {
+		47.00f, 47.00f, 58.00f, 60.00f, 60.50f,
+		62.00f, 63.00f, 64.00f, 65.00f, 66.00f,
+		67.00f, 68.00f, 69.00f, 70.00f, 71.00f,
+		72.00f, 73.00f, 74.00f, 75.00f, 76.00f,
+		77.00f, 78.00f, 79.00f, 80.00f, 81.00f,
+			82.00f, 83.00f, 84.00f, 85.00f, 86.00f, 87.00f
+	};
+	const uint8_t calibration_points = sizeof(measured_vcc) / sizeof(measured_vcc[0]);
+
+	if (vcc_f <= measured_vcc[0])
 	{
-		vcc_supply_f = 47.0f + (vcc_f - 53.31f);
-	}
-	else if (vcc_f < 59.6f)
-	{
-		vcc_supply_f = 47.0f + (vcc_f - 53.31f) * 1.7488076f;
-	}
-	else if (vcc_f < 60.5f)
-	{
-		vcc_supply_f = 58.0f + (vcc_f - 59.6f) * 2.2222222f;
-	}
-	else if (vcc_f < 60.8f)
-	{
-		vcc_supply_f = 60.0f + (vcc_f - 60.5f) * 1.6666667f;
-	}
-	else if (vcc_f < 61.0f)
-	{
-		vcc_supply_f = 60.5f + (vcc_f - 60.8f) * 2.5f;
+		vcc_supply_f = supply_vcc[0] + (vcc_f - measured_vcc[0]);
 	}
 	else
 	{
-		vcc_supply_f = vcc_f;
+		uint8_t i;
+
+		for (i = 1; i < calibration_points; i++)
+		{
+			if (vcc_f <= measured_vcc[i])
+			{
+				vcc_supply_f = supply_vcc[i - 1] +
+					(supply_vcc[i] - supply_vcc[i - 1]) *
+					(vcc_f - measured_vcc[i - 1]) /
+					(measured_vcc[i] - measured_vcc[i - 1]);
+				break;
+			}
+		}
+
+		if (i == calibration_points)
+		{
+			/* Continue the final calibration slope instead of clamping to 87 V. */
+			vcc_supply_f = supply_vcc[calibration_points - 2] +
+				(supply_vcc[calibration_points - 1] - supply_vcc[calibration_points - 2]) *
+				(vcc_f - measured_vcc[calibration_points - 2]) /
+				(measured_vcc[calibration_points - 1] - measured_vcc[calibration_points - 2]);
+		}
 	}
 
 

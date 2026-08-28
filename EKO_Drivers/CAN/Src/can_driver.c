@@ -23,12 +23,11 @@
 #define ERROR_HANDLER_AVAILABLE (0)
 #endif
 
-void CAN_Init(CAN_HandleTypeDef *hcanPtr)
+HAL_StatusTypeDef CAN_Init(CAN_HandleTypeDef *hcanPtr)
 {
 	if (hcanPtr == NULL)
 	{
-		Error_Handler();
-		return;
+		return HAL_ERROR;
 	}
 
 	/*
@@ -52,20 +51,21 @@ void CAN_Init(CAN_HandleTypeDef *hcanPtr)
 
 	if (HAL_CAN_ConfigFilter(hcanPtr, &filterConfig) != HAL_OK)
 	{
-		/* Filter configuration Error */
-		Error_Handler();
+		return HAL_ERROR;
 	}
 
 	if (HAL_CAN_Start(hcanPtr) != HAL_OK)
 	{
-		Error_Handler();
+		return HAL_ERROR;
 	}
 
 	/* RX FIFO0 pending IRQ — thermistor / safe-state frames handled in HAL_CAN_RxFifo0MsgPendingCallback */
 	if (HAL_CAN_ActivateNotification(hcanPtr, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK)
 	{
-		Error_Handler();
+		return HAL_ERROR;
 	}
+
+	return HAL_OK;
 }
 
 HAL_StatusTypeDef CAN_AddScheduledMsg(struct CAN_scheduledMsg *msg, struct CAN_scheduledMsgList *buffer)

@@ -48,7 +48,9 @@ HAL_StatusTypeDef BMS_CAN_Init(BMS_TypeDef* bms){
 	__HAL_RCC_CAN1_CLK_ENABLE();
 
 	/* Single CAN peripheral: TX scheduled frames + RX thermistor / safe-state frames. */
-	CAN_Init(bms->bmsCAN.bhcan1);
+	if(CAN_Init(bms->bmsCAN.bhcan1) != HAL_OK){
+		return HAL_ERROR;
+	}
 
 	/* Re-entry from BMS_Start_Peripherals must not duplicate scheduled IDs */
 	if(bms->bmsCAN.CAN1_Buff.size == 0U){
