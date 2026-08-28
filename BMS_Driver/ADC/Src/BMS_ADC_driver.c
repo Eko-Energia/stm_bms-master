@@ -161,17 +161,22 @@ HAL_StatusTypeDef BMS_ADC_Read_Temperature(BMS_TypeDef* bms){
 }
 
 HAL_StatusTypeDef BMS_ADC_Read_Current(BMS_TypeDef* bms){
-	uint16_t current_b = 0;     // binary type of current
-	float current_f    = 0.0f;  // real type of current
+	float current_pin_v  = 0.0f;  // voltage measured by the ADC after the divider
+	float sensor_v       = 0.0f;  // reconstructed sensor output voltage
+	float current_f      = 0.0f;  // current in amperes
 
-	// reading channel's value
-	if(ADC_ReadChannel(bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, ADC_CURRENT_CH, &current_b) != HAL_OK){
+	// Read the ADC pin voltage instead of using the raw ADC count as amperes.
+	if(ADC_Get_PinVoltage(bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, ADC_CURRENT_CH, &current_pin_v) != HAL_OK){
 		return HAL_ERROR;
 	}
 
-	// Reserved for ADC current measurement tests (no active test code here).
-	// calculating real value of current
-	current_f = ((float)current_b - 2108.0f)/4.0f;
+	/*
+	 * L01Z300S05: 0..5 V output represents -300..+300 A.
+	 * R19/R27 attenuate the sensor output before it reaches the 3.3 V ADC.
+	 */
+	sensor_v = current_pin_v * (float)((R19 + R27) / R27);
+	current_f = (sensor_v - 2.5f) * (600.0f / 5.0f) + CURRENT_SENSOR_OFFSET_A;
+	current_f = current_f * CURRENT_CALIBRATION_GAIN + CURRENT_CALIBRATION_OFFSET_A;
 
 	// converting real value into value, ready to be send via CAN1
 	if(BMS_CAN_ScallingParams(bms, ADC_CURRENT_CH, current_f) != HAL_OK){

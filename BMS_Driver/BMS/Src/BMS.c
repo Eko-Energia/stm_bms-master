@@ -42,13 +42,16 @@ HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, ADC_Han
 	bms->bmsCAN.bhcan1      = bhcan1;
 	bms->errorLogger.huart1 = huart;
 	bms->bpwm.htim.htim 	= htim;
+	BMS_RS485_Init(bms);
 
 	// setting default status (normal) for BMS
 	bms->status     = BMS_NORMAL;
 	bms->prevStatus = BMS_NORMAL;
 
 	// Reset ADC scaled TX buffer (voltage / temperature / current)
-	memset(bms->bmsADC.ADC_voltTempCurr, 0 , sizeof(bms->bmsADC.ADC_voltTempCurr));
+	for(uint8_t i = 0U; i < 3U; ++i){
+		bms->bmsADC.ADC_voltTempCurr[i] = 0;
+	}
 
 	/* Clear thermistor matrix [7 PCBs][9 therms] — sizeof whole array, not one byte/row */
 	memset(bms->bmsCAN.CAN2_temperatureCells, 0, sizeof(bms->bmsCAN.CAN2_temperatureCells));
@@ -94,6 +97,45 @@ HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, ADC_Han
     bms->fanState = OFF;
 
 	return HAL_OK;
+}
+
+void BMS_RS485_Init(BMS_TypeDef* bms){
+	if(bms == NULL){
+		return;
+	}
+
+	HAL_GPIO_WritePin(RS_DIR_GPIO_Port, RS_DIR_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(RE_DIR_GPIO_Port, RE_DIR_Pin, GPIO_PIN_RESET);
+}
+
+HAL_StatusTypeDef BMS_RS485_Transmit(BMS_TypeDef* bms, uint8_t* data, uint16_t size, uint32_t timeout){
+	HAL_StatusTypeDef status;
+
+	if(bms == NULL || bms->errorLogger.huart1 == NULL || data == NULL || size == 0U){
+		return HAL_ERROR;
+	}
+
+	HAL_GPIO_WritePin(RE_DIR_GPIO_Port, RE_DIR_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(RS_DIR_GPIO_Port, RS_DIR_Pin, GPIO_PIN_SET);
+	status = HAL_UART_Transmit(bms->errorLogger.huart1, data, size, timeout);
+	if(status == HAL_OK){
+		status = HAL_UART_GetState(bms->errorLogger.huart1) == HAL_UART_STATE_READY ? HAL_OK : HAL_ERROR;
+	}
+	HAL_GPIO_WritePin(RS_DIR_GPIO_Port, RS_DIR_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(RE_DIR_GPIO_Port, RE_DIR_Pin, GPIO_PIN_RESET);
+
+	return status;
+}
+
+HAL_StatusTypeDef BMS_RS485_Receive(BMS_TypeDef* bms, uint8_t* data, uint16_t size, uint32_t timeout){
+	if(bms == NULL || bms->errorLogger.huart1 == NULL || data == NULL || size == 0U){
+		return HAL_ERROR;
+	}
+
+	HAL_GPIO_WritePin(RS_DIR_GPIO_Port, RS_DIR_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(RE_DIR_GPIO_Port, RE_DIR_Pin, GPIO_PIN_RESET);
+
+	return HAL_UART_Receive(bms->errorLogger.huart1, data, size, timeout);
 }
 
 /*

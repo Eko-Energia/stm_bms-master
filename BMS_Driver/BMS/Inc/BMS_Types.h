@@ -22,6 +22,7 @@
 /* Includes --------------------------------------------------------------------------------  */
 
 /* General */
+#include "stm32f1xx_hal.h"
 #include "main.h"
 #include <string.h>
 
@@ -91,7 +92,7 @@ typedef struct{
 typedef struct{
 	ADC_HandleTypeDef*           hadc;													/*<ADC  handle used in BMS's firmware | measuring data via ADC>*/
 
-	uint16_t 			         ADC_voltTempCurr[3];									/*<ADC's converted value (ready to send via CAN1) buff>*/
+	volatile int16_t 	         ADC_voltTempCurr[3];									/*<ADC's converted value (ready to send via CAN1) buff>*/
 
 	ADC_ChannelsConfigTypeDefs   cadc1;													/*<ADC1's Channels' configurations object>*/
 	ADC_BufferTypeDef	         badc1;													/*<ADC1's Channels' converted value buffer>*/
@@ -228,6 +229,13 @@ typedef struct{
 */
 #define R1					(249000.0f)
 #define R2					(9100.0f)
+#define R19					(5600.0f)
+#define R27					(10000.0f)
+
+/* Measured current-sensor bias: firmware reads -11 A at a true -1 A. */
+#define CURRENT_SENSOR_OFFSET_A	(10.7f)
+#define CURRENT_CALIBRATION_GAIN	(-1.6666667f)
+#define CURRENT_CALIBRATION_OFFSET_A	(-2.5f)
 
 /* Fixed 10 kΩ from ADC node (PC0) to GND; NTC is the upper leg to VCC */
 #define NTC_LOWER_OHM		(10000.0f)

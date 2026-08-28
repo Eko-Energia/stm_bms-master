@@ -15,6 +15,7 @@
   */
 
 #include "BMS_CAN_driver.h"
+w#include <math.h>
 
 /* Variables ---------------------------------------------------------*/
 extern BMS_TypeDef 		   bms;								//< Init BMS object
@@ -143,16 +144,16 @@ HAL_StatusTypeDef BMS_CAN_AddPeripheralFrames(BMS_TypeDef* bms){
 void BMS_CAN_Get_ADC_Data(uint8_t *data, void* context){
 
 	// setting data with ADC's measured voltage
-	data[0] = BMS_CAN_GetLSB(bms.bmsADC.ADC_voltTempCurr[0]);	// LSB
-	data[1] = BMS_CAN_GetMSB(bms.bmsADC.ADC_voltTempCurr[0]);   // MSB
+	data[0] = BMS_CAN_GetLSB((uint16_t)bms.bmsADC.ADC_voltTempCurr[0]);	// LSB
+	data[1] = BMS_CAN_GetMSB((uint16_t)bms.bmsADC.ADC_voltTempCurr[0]);   // MSB
 
 	// setting data with ADC's measured current
-	data[2] = BMS_CAN_GetLSB(bms.bmsADC.ADC_voltTempCurr[2]);	// LSB
-	data[3] = BMS_CAN_GetMSB(bms.bmsADC.ADC_voltTempCurr[2]);   // MSB
+	data[2] = BMS_CAN_GetLSB((uint16_t)bms.bmsADC.ADC_voltTempCurr[2]);	// LSB
+	data[3] = BMS_CAN_GetMSB((uint16_t)bms.bmsADC.ADC_voltTempCurr[2]);   // MSB
 
 	// setting data with ADC's measured temperature
-	data[4] = BMS_CAN_GetLSB(bms.bmsADC.ADC_voltTempCurr[1]);	// LSB
-	data[5] = BMS_CAN_GetMSB(bms.bmsADC.ADC_voltTempCurr[1]);   // MSB
+	data[4] = BMS_CAN_GetLSB((uint16_t)bms.bmsADC.ADC_voltTempCurr[1]);	// LSB
+	data[5] = BMS_CAN_GetMSB((uint16_t)bms.bmsADC.ADC_voltTempCurr[1]);   // MSB
 }
 
 void BMS_CAN_PackCAN2Temps(uint8_t* data, uint8_t thermId){
@@ -193,7 +194,7 @@ HAL_StatusTypeDef BMS_CAN_ScallingParams(BMS_TypeDef* bms, uint8_t channel, floa
 		case ADC_CURRENT_CH:
 
 			// calculating binary type of read current with factor and offset
-			bms->bmsADC.ADC_voltTempCurr[2] = (value_f + CURRENT_OFFSET)     / CURRENT_GAIN;
+			bms->bmsADC.ADC_voltTempCurr[2] = (int16_t)lroundf((value_f + CURRENT_OFFSET) / CURRENT_GAIN);
 			break;
 		case ADC_TEMP_CH:
 
