@@ -90,18 +90,18 @@ typedef struct{
     uint16_t rs485_re_pin;
 
     uint8_t rxBuffer[BMS_JK_MAX_RX_BYTES];
-    uint16_t rxLen;
+    volatile uint16_t rxLen;
     uint8_t txBuffer[BMS_JK_MAX_FRAME_LEN];
-    uint16_t txLen;
+    volatile uint16_t txLen;
 
     BMS_JK_SnapshotTypeDef snapshot;
-    uint8_t initialized;
-    uint8_t lastGoodCommand;
-    uint8_t lastReadCommand;
-    uint8_t pollIndex;
-    uint8_t lastReadValid;
-    uint8_t validationFlags;
-    uint8_t retryCount;
+    volatile uint8_t initialized;
+    volatile uint8_t lastGoodCommand;
+    volatile uint8_t lastReadCommand;
+    volatile uint8_t pollIndex;
+    volatile uint8_t lastReadValid;
+    volatile uint8_t validationFlags;
+    volatile uint8_t retryCount;
 } BMS_JK_HandleTypeDef;
 
 /* ---------------------------------------------------------------------------

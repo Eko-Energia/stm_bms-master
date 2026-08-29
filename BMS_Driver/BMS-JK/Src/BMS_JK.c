@@ -30,15 +30,16 @@ void BMS_JK_EnterCriticalSection(void)
 {
     /* Do not globally disable interrupts here: SysTick is used by HAL_GetTick,
      * and stopping it freezes LED timing and other periodic functions.
-     * Use a lightweight access guard to serialize JK UART transactions only. */
-    if (s_bmsJkCommLock == 0U) {
-        s_bmsJkCommLock = 1U;
+     * Use an atomic guard instead, which is safe for lock-free serialization of
+     * the JK UART transaction without impacting the rest of the system. */
+    while (__atomic_exchange_n(&s_bmsJkCommLock, 1U, __ATOMIC_ACQ_REL) != 0U) {
+        /* wait for the lock to be released without disabling interrupts */
     }
 }
 
 void BMS_JK_ExitCriticalSection(void)
 {
-    s_bmsJkCommLock = 0U;
+    __atomic_store_n(&s_bmsJkCommLock, 0U, __ATOMIC_RELEASE);
 }
 
 static uint8_t BMS_JK_CountNonZeroFields(const BMS_JK_SnapshotTypeDef *snapshot)
@@ -256,6 +257,7 @@ static uint16_t BMS_JK_CalcCrc16Sum(const uint8_t *data, uint16_t len)
 uint8_t BMS_JK_ValidateResponseFrame(const uint8_t *data, uint16_t len, uint8_t expectedCommand)
 {
     uint16_t crc;
+    uint16_t commandIndex = 0U;
 
     if ((data == NULL) || (len < 21U)) {
         return 0U;
@@ -265,26 +267,26 @@ uint8_t BMS_JK_ValidateResponseFrame(const uint8_t *data, uint16_t len, uint8_t 
         return 0U;
     }
 
-    if ((data[8] != BMS_JK_CMD_READ) || (data[9] != BMS_JK_SRC_HOST) || (data[10] != 0x00U)) {
+    if (data[len - 3U] != BMS_JK_END_MARK) {
         return 0U;
     }
 
-    if ((data[11] != expectedCommand) || (data[16] != BMS_JK_END_MARK)) {
+    crc = (uint16_t)(((uint16_t)data[len - 2U] << 8U) | (uint16_t)data[len - 1U]);
+    if (BMS_JK_CalcCrc16Sum(data, (uint16_t)(len - 2U)) != crc) {
         return 0U;
     }
 
-    crc = (uint16_t)(((uint16_t)data[19] << 8U) | (uint16_t)data[20]);
-    if (BMS_JK_CalcCrc16Sum(data, 17U) != crc) {
-        return 0U;
-    }
-
-    for (uint16_t i = 0U; i < len; ++i) {
-        if (data[i] != 0U) {
-            return 1U;
+    for (uint16_t i = 8U; i + 1U < len; ++i) {
+        if (data[i] == expectedCommand) {
+            commandIndex = i;
+            break;
         }
     }
+    if (commandIndex == 0U) {
+        return 0U;
+    }
 
-    return 0U;
+    return 1U;
 }
 
 static uint16_t BMS_JK_EncodeU16LE(uint8_t *dst, uint16_t value)
@@ -429,60 +431,104 @@ HAL_StatusTypeDef BMS_JK_DecodeFrame(BMS_JK_HandleTypeDef *jk, const uint8_t *da
     uint16_t pos;
     uint16_t length;
     const uint8_t *payload;
+    uint8_t command;
 
     if ((jk == NULL) || (data == NULL) || (len < 5U)) {
         return HAL_ERROR;
     }
 
-    /* JK BMS response logic from the verified Python analyzer.
-     * Cell voltage block: 0x79 <length> <cell_idx><volt_hi><volt_lo> ...
-     */
-    for (pos = 0U; pos + 2U < len; ++pos) {
-        if (data[pos] == BMS_JK_CMD_CELL_VOLTAGES) {
-            length = (uint16_t)data[pos + 1U];
-            if (pos + 2U + length <= len) {
-                payload = &data[pos + 2U];
-                jk->snapshot.cellCount = (length > BMS_JK_MAX_CELL_COUNT * 3U) ? BMS_JK_MAX_CELL_COUNT : (uint8_t)(length / 3U);
-                for (uint8_t i = 0U; i < jk->snapshot.cellCount; ++i) {
-                    uint16_t mv = (uint16_t)payload[i * 3U + 1U] << 8U;
-                    mv |= payload[i * 3U + 2U];
-                    jk->snapshot.cellVoltageMV[i] = mv;
+    /* Clear stale values before every new decode. Otherwise an invalid or partial
+     * response leaves old values in the snapshot, which makes the object look
+     * “valid” even though the current request failed. */
+    BMS_JK_ClearSnapshot(jk);
+
+    command = jk->lastReadCommand;
+    if (command == 0U) {
+        command = BMS_JK_CMD_CELL_VOLTAGES;
+    }
+
+    switch (command) {
+    case BMS_JK_CMD_CELL_VOLTAGES:
+        for (pos = 0U; pos + 2U < len; ++pos) {
+            if (data[pos] == BMS_JK_CMD_CELL_VOLTAGES) {
+                length = (uint16_t)data[pos + 1U];
+                if ((pos + 2U + length) <= len) {
+                    payload = &data[pos + 2U];
+                    jk->snapshot.cellCount = (length > (BMS_JK_MAX_CELL_COUNT * 3U)) ? BMS_JK_MAX_CELL_COUNT : (uint8_t)(length / 3U);
+                    for (uint8_t i = 0U; i < jk->snapshot.cellCount; ++i) {
+                        uint16_t mv = (uint16_t)payload[i * 3U + 1U] << 8U;
+                        mv |= payload[i * 3U + 2U];
+                        jk->snapshot.cellVoltageMV[i] = mv;
+                        jk->snapshot.packVoltageMV += (int32_t)mv;
+                    }
+                    jk->initialized = 1U;
+                    return HAL_OK;
                 }
+            }
+        }
+        break;
+
+    case BMS_JK_CMD_VOLTAGE:
+        for (pos = 0U; pos + 1U < len; ++pos) {
+            uint16_t raw = (uint16_t)data[pos] | ((uint16_t)data[pos + 1U] << 8U);
+            if ((raw >= 2000U) && (raw <= 30000U)) {
+                jk->snapshot.packVoltageMV = (int32_t)raw * 10;
                 jk->initialized = 1U;
                 return HAL_OK;
             }
         }
-    }
+        break;
 
-    /* Generic numeric field decode used by the protocol analyzer. */
-    for (pos = 0U; pos + 1U < len; ++pos) {
-        uint16_t raw = (uint16_t)data[pos] << 8U | (uint16_t)data[pos + 1U];
-        uint16_t value = raw & 0x7FFFU;
-
-        if (data[pos] == 0x00U && data[pos + 1U] <= 100U) {
-            jk->snapshot.soc = data[pos + 1U];
-            jk->initialized = 1U;
-            return HAL_OK;
+    case BMS_JK_CMD_CURRENT:
+        for (pos = 0U; pos + 1U < len; ++pos) {
+            int16_t current = (int16_t)((uint16_t)data[pos] | ((uint16_t)data[pos + 1U] << 8U));
+            if ((current >= -20000) && (current <= 20000)) {
+                jk->snapshot.packCurrentMA = (int32_t)current * 10;
+                jk->initialized = 1U;
+                return HAL_OK;
+            }
         }
+        break;
 
-        if ((raw >= 2000U) && (raw <= 3000U)) {
-            jk->snapshot.packVoltageMV = (int32_t)(raw * 10U);
-            jk->initialized = 1U;
-            return HAL_OK;
+    case BMS_JK_CMD_SOC:
+        for (pos = 0U; pos < len; ++pos) {
+            if (data[pos] <= 100U) {
+                jk->snapshot.soc = data[pos];
+                jk->initialized = 1U;
+                return HAL_OK;
+            }
         }
+        break;
 
-        if ((value <= 20000U) && ((int16_t)raw >= -20000)) {
-            int16_t current = (int16_t)raw;
-            jk->snapshot.packCurrentMA = (int32_t)current * 10;
-            jk->initialized = 1U;
-            return HAL_OK;
+    case BMS_JK_CMD_TEMPERATURES:
+        for (pos = 0U; pos + 1U < len; ++pos) {
+            int16_t temp = (int16_t)((uint16_t)data[pos] | ((uint16_t)data[pos + 1U] << 8U));
+            if ((temp >= -40) && (temp <= 150)) {
+                jk->snapshot.mosTemperatureC = temp;
+                jk->snapshot.tempSensorCount = 1U;
+                jk->initialized = 1U;
+                return HAL_OK;
+            }
         }
+        break;
 
-        if ((int16_t)raw >= -40 && (int16_t)raw <= 150) {
-            jk->snapshot.mosTemperatureC = (int16_t)raw;
-            jk->initialized = 1U;
-            return HAL_OK;
+    case BMS_JK_CMD_CAPACITY:
+        for (pos = 0U; pos + 3U < len; ++pos) {
+            uint32_t cap = (uint32_t)data[pos] |
+                           ((uint32_t)data[pos + 1U] << 8U) |
+                           ((uint32_t)data[pos + 2U] << 16U) |
+                           ((uint32_t)data[pos + 3U] << 24U);
+            if (cap != 0U) {
+                jk->snapshot.remainingCapacityMah = cap;
+                jk->snapshot.fullCapacityMah = cap;
+                jk->initialized = 1U;
+                return HAL_OK;
+            }
         }
+        break;
+
+    default:
+        break;
     }
 
     return HAL_ERROR;
