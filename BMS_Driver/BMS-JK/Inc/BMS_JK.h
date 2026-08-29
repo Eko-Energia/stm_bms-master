@@ -72,17 +72,12 @@ typedef struct {
 HAL_StatusTypeDef BMS_JK_Init(BMS_JK_HandleTypeDef *jk, UART_HandleTypeDef *huart, 
                               GPIO_TypeDef *de_port, uint16_t de_pin, 
                               GPIO_TypeDef *re_port, uint16_t re_pin);
-HAL_StatusTypeDef BMS_JK_Update(BMS_JK_HandleTypeDef *jk, uint32_t timeout);
+HAL_StatusTypeDef BMS_JK_Normal(BMS_JK_HandleTypeDef *jk, uint32_t timeout);
 HAL_StatusTypeDef BMS_JK_DecodeFrame(BMS_JK_HandleTypeDef *jk, const uint8_t *data, uint16_t len);
 void BMS_JK_ClearSnapshot(BMS_JK_HandleTypeDef *jk);
 
 uint8_t BMS_JK_GetNextPollCommand(BMS_JK_HandleTypeDef *jk);
-HAL_StatusTypeDef BMS_JK_SendRequest(BMS_JK_HandleTypeDef *jk, uint8_t commandId, uint32_t timeout);
-HAL_StatusTypeDef BMS_JK_ReceiveResponse(BMS_JK_HandleTypeDef *jk, uint32_t timeout);
-
-uint8_t BMS_JK_ValidateResponseFrame(const uint8_t *buffer, uint16_t len, uint8_t commandId);
-uint8_t BMS_JK_IsSnapshotValidForCommand(const BMS_JK_SnapshotTypeDef *snapshot, uint8_t commandId);
-void BMS_JK_ApplyReadoutDecision(BMS_JK_HandleTypeDef *jk, uint8_t commandId, uint8_t responseValid, uint8_t payloadZero, uint8_t decodeOk, uint8_t snapshotOk);
+HAL_StatusTypeDef BMS_JK_PackAllCommandsBuffer(uint8_t *pDestBuffer, uint16_t *pTotalLen);
 
 #ifdef __cplusplus
 }

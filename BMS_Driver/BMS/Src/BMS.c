@@ -130,6 +130,7 @@ HAL_StatusTypeDef BMS_RS485_Receive(BMS_TypeDef* bms, uint8_t* data, uint16_t si
 	 ==============================================================================
 */
 
+// Inside BMS_Mode_Normal in BMS.c:
 HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms){
 
 	// re-launching peripherals in case change of status occurred
@@ -170,30 +171,8 @@ HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms){
 		return HAL_ERROR;
 	}
 
-	// Process JK-BMS Telemetry Polling and Data Extraction on RS485 link
-	{
-		uint8_t jkCmd = BMS_JK_GetNextPollCommand(&bms->bmsJK);
-		uint8_t responseValid = 0U;
-		uint8_t payloadZero = 0U;
-		uint8_t decodeOk = 0U;
-		uint8_t snapshotOk = 0U;
-
-		if (BMS_JK_SendRequest(&bms->bmsJK, jkCmd, 50U) == HAL_OK) {
-			if (BMS_JK_ReceiveResponse(&bms->bmsJK, 100U) == HAL_OK) {
-				if (bms->bmsJK.rxLen > 0U) {
-					responseValid = BMS_JK_ValidateResponseFrame(bms->bmsJK.rxBuffer, bms->bmsJK.rxLen, jkCmd);
-					if (responseValid != 0U) {
-						decodeOk = (BMS_JK_DecodeFrame(&bms->bmsJK, bms->bmsJK.rxBuffer, bms->bmsJK.rxLen) == HAL_OK) ? 1U : 0U;
-						if (decodeOk != 0U) {
-							snapshotOk = BMS_JK_IsSnapshotValidForCommand(&bms->bmsJK.snapshot, jkCmd);
-							payloadZero = (snapshotOk == 0U) ? 1U : 0U;
-						}
-					}
-					BMS_JK_ApplyReadoutDecision(&bms->bmsJK, jkCmd, responseValid, payloadZero, decodeOk, snapshotOk);
-				}
-			}
-		}
-	}
+	// Process JK-BMS Telemetry Polling and Data Extraction via flat sequential routine
+	(void)BMS_JK_Normal(&bms->bmsJK, 100U);
 
 	return HAL_OK;
 }
