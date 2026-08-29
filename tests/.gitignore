@@ -1,2 +1,0 @@
-# Ignore CMake/build artifacts under tests/
-build/

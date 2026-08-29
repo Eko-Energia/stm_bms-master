@@ -15,6 +15,7 @@
   */
 
 #include "BMS_CAN_driver.h"
+w#include <math.h>
 
 /* Variables ---------------------------------------------------------*/
 extern BMS_TypeDef 		   bms;								//< Init BMS object
@@ -27,22 +28,37 @@ static uint8_t 			   rxData[8] = {0};				    //< Init data storage for Rx frame'
 /* Functions' bodies -------------------------------------------------*/
 HAL_StatusTypeDef BMS_CAN_Init(BMS_TypeDef* bms){
 
-	// Setting normal state for both transceivers
-	HAL_GPIO_WritePin(nCAN1_Stby_GPIO_Port, nCAN1_Stby_Pin, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(nCAN2_Stby_GPIO_Port, nCAN2_Stby_Pin, GPIO_PIN_RESET);
+	/*
+	 * Transceiver enable pin polarity — override at build time if the actual
+	 * chip on the board uses active-HIGH enable (e.g. TJA1051T/3, TJA1042: STB
+	 * pin where HIGH = normal, LOW = standby). Default is active-LOW to match
+	 * the "nSTBY" schematic naming.
+	 */
+#ifndef CAN_STBY_ACTIVE_LEVEL
+#define CAN_STBY_ACTIVE_LEVEL GPIO_PIN_RESET   /* LOW asserts "normal mode" */
+#endif
+	HAL_GPIO_WritePin(nCAN1_Stby_GPIO_Port, nCAN1_Stby_Pin, CAN_STBY_ACTIVE_LEVEL);
 
-	// Init of CAN1 and CAN2 to start communication via these buses
-	CAN_Init(bms->bmsCAN.bhcan1);
-	CAN_Init(bms->bmsCAN.bhcan2);
+	/*
+	 * Transceiver wake-up window. Most CAN transceivers (TJA1050/1051, MCP2551,
+	 * SN65HVD230, etc.) need up to a few hundred µs after leaving standby
+	 * before the RX pin becomes valid recessive.
+	 */
+	HAL_Delay(10);
 
-	// Adding frames co-related to peripherals data
-	if(BMS_CAN_AddPeripheralFrames(bms) != HAL_OK){
+	__HAL_RCC_CAN1_CLK_ENABLE();
+
+	/* Single CAN peripheral: TX scheduled frames + RX thermistor / safe-state frames. */
+	if(CAN_Init(bms->bmsCAN.bhcan1) != HAL_OK){
 		return HAL_ERROR;
 	}
 
-	// Launching RCC clock for CAN1 and CAN2
-	__HAL_RCC_CAN1_CLK_ENABLE();
-	__HAL_RCC_CAN2_CLK_ENABLE();
+	/* Re-entry from BMS_Start_Peripherals must not duplicate scheduled IDs */
+	if(bms->bmsCAN.CAN1_Buff.size == 0U){
+		if(BMS_CAN_AddPeripheralFrames(bms) != HAL_OK){
+			return HAL_ERROR;
+		}
+	}
 
 	return HAL_OK;
 }
@@ -128,16 +144,16 @@ HAL_StatusTypeDef BMS_CAN_AddPeripheralFrames(BMS_TypeDef* bms){
 void BMS_CAN_Get_ADC_Data(uint8_t *data, void* context){
 
 	// setting data with ADC's measured voltage
-	data[0] = BMS_CAN_GetLSB(bms.bmsADC.ADC_voltTempCurr[0]);	// LSB
-	data[1] = BMS_CAN_GetMSB(bms.bmsADC.ADC_voltTempCurr[0]);   // MSB
+	data[0] = BMS_CAN_GetLSB((uint16_t)bms.bmsADC.ADC_voltTempCurr[0]);	// LSB
+	data[1] = BMS_CAN_GetMSB((uint16_t)bms.bmsADC.ADC_voltTempCurr[0]);   // MSB
 
 	// setting data with ADC's measured current
-	data[2] = BMS_CAN_GetLSB(bms.bmsADC.ADC_voltTempCurr[2]);	// LSB
-	data[3] = BMS_CAN_GetMSB(bms.bmsADC.ADC_voltTempCurr[2]);   // MSB
+	data[2] = BMS_CAN_GetLSB((uint16_t)bms.bmsADC.ADC_voltTempCurr[2]);	// LSB
+	data[3] = BMS_CAN_GetMSB((uint16_t)bms.bmsADC.ADC_voltTempCurr[2]);   // MSB
 
 	// setting data with ADC's measured temperature
-	data[4] = BMS_CAN_GetLSB(bms.bmsADC.ADC_voltTempCurr[1]);	// LSB
-	data[5] = BMS_CAN_GetMSB(bms.bmsADC.ADC_voltTempCurr[1]);   // MSB
+	data[4] = BMS_CAN_GetLSB((uint16_t)bms.bmsADC.ADC_voltTempCurr[1]);	// LSB
+	data[5] = BMS_CAN_GetMSB((uint16_t)bms.bmsADC.ADC_voltTempCurr[1]);   // MSB
 }
 
 void BMS_CAN_PackCAN2Temps(uint8_t* data, uint8_t thermId){
@@ -167,23 +183,23 @@ uint8_t BMS_CAN_GetLSB(uint16_t value){
 }
 
 
-HAL_StatusTypeDef BMS_CAN_ScallingParams(BMS_TypeDef* bms, uint8_t channel, float* value_f){
+HAL_StatusTypeDef BMS_CAN_ScallingParams(BMS_TypeDef* bms, uint8_t channel, float value_f){
 
 	switch(channel){
 		case ADC_VOLTAGE_CH:
 
 			// calculating binary type of read voltage with factor and offset
-			bms->bmsADC.ADC_voltTempCurr[0] = (*value_f + VOLTAGE_OFFSET)     / VOLTAGE_GAIN;
+			bms->bmsADC.ADC_voltTempCurr[0] = (value_f + VOLTAGE_OFFSET)     / VOLTAGE_GAIN;
 			break;
 		case ADC_CURRENT_CH:
 
-			// calculating binary type of read voltage with factor and offset
-			bms->bmsADC.ADC_voltTempCurr[2] = (*value_f + CURRENT_OFFSET)     / CURRENT_GAIN;
+			// calculating binary type of read current with factor and offset
+			bms->bmsADC.ADC_voltTempCurr[2] = (int16_t)lroundf((value_f + CURRENT_OFFSET) / CURRENT_GAIN);
 			break;
 		case ADC_TEMP_CH:
 
-			// calculating binary type of read voltage with factor and offset
-			bms->bmsADC.ADC_voltTempCurr[1] = (*value_f + TEMPERATURE_OFFSET) / TEMPERATURE_GAIN;
+			// calculating binary type of read temperature with factor and offset
+			bms->bmsADC.ADC_voltTempCurr[1] = (value_f + TEMPERATURE_OFFSET) / TEMPERATURE_GAIN;
 			break;
 		default:
 
@@ -248,7 +264,7 @@ HAL_StatusTypeDef BMS_CAN_HandleRxMsg(BMS_TypeDef *bms){
 	int pcbIndex   = ((int)stdId - BMS_THERM_ID_BASE) / 10;
 	int thermIndex = (int)stdId - BMS_THERM_ID_BASE - pcbIndex * 10;
 
-	/* Reject IDs outside the valid 7x9 thermistor map (HW filter may still pass 0x200..0x27F) */
+	/* Reject IDs outside the valid 7x9 thermistor map (HW may still pass 0x0C0..0x11F) */
 	if(pcbIndex < 1 || pcbIndex > BMS_THERM_PCB_COUNT ||
 
 		thermIndex < 1 || thermIndex > BMS_THERM_PER_PCB){
@@ -302,12 +318,12 @@ HAL_StatusTypeDef BMS_CAN_HandleRxMsg(BMS_TypeDef *bms){
 
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan){
 
-	if(hcan->Instance == CAN2){
+	if(hcan->Instance == CAN1){
 
 		if(HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &RxHeader, rxData) == HAL_OK){
 
 			// setting flag to proceed received frame
-			rxMsgReceived = 1;
+ 			rxMsgReceived = 1;
 
 		}
 	}

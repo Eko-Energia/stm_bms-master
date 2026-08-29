@@ -22,8 +22,9 @@
 /* Includes --------------------------------------------------------------------------------  */
 
 /* General */
+#include "stm32f1xx_hal.h"
 #include "main.h"
-#include "string.h"
+#include <string.h>
 
 /* Drivers */
 #include "adc_driver.h"
@@ -91,7 +92,7 @@ typedef struct{
 typedef struct{
 	ADC_HandleTypeDef*           hadc;													/*<ADC  handle used in BMS's firmware | measuring data via ADC>*/
 
-	uint16_t 			         ADC_voltTempCurr[3];									/*<ADC's converted value (ready to send via CAN1) buff>*/
+	volatile int16_t 	         ADC_voltTempCurr[3];									/*<ADC's converted value (ready to send via CAN1) buff>*/
 
 	ADC_ChannelsConfigTypeDefs   cadc1;													/*<ADC1's Channels' configurations object>*/
 	ADC_BufferTypeDef	         badc1;													/*<ADC1's Channels' converted value buffer>*/
@@ -103,12 +104,11 @@ typedef struct{
   */
 typedef struct{
 
-	CAN_HandleTypeDef*   bhcan1;													/*<CAN1 handle used in BMS's firmware | sending   data via CAN1>*/
-	CAN_HandleTypeDef*   bhcan2;													/*<CAN2 handle used in BMS's firmware | receiving data via CAN2>*/
+	CAN_HandleTypeDef*   bhcan1;													/*<CAN1 handle used in BMS's firmware | TX scheduled frames + RX thermistor frames>*/
 
 	struct CAN_scheduledMsgList CAN1_Buff;											/*<CAN1 frames buffer>*/
 
-	uint8_t 			 CAN2_temperatureCells[7][9];								/*<CAN2's received value (ready to send via CAN1) buff>*/
+	uint8_t 			 CAN2_temperatureCells[7][9];								/*<Received thermistor values (via CAN1 RX) — matrix kept under legacy name>*/
 
 }CAN_BMSTypeDef;
 
@@ -222,6 +222,22 @@ typedef struct{
 
 #define VCC_SUPPLY_VOLTAGE  (3.3f)															/*<MAX DC Supply Voltage for STM32f105>*/
 
+/*
+	 ==============================================================================
+						   ##### BMS Resistors in voltage divider#####
+	 ==============================================================================
+*/
+#define R1					(249000.0f)
+#define R2					(9100.0f)
+#define R19					(5600.0f)
+#define R27					(10000.0f)
 
+/* Measured current-sensor bias: firmware reads -11 A at a true -1 A. */
+#define CURRENT_SENSOR_OFFSET_A	(10.7f)
+#define CURRENT_CALIBRATION_GAIN	(-1.6666667f)
+#define CURRENT_CALIBRATION_OFFSET_A	(-2.5f)
+
+/* Fixed 10 kΩ from ADC node (PC0) to GND; NTC is the upper leg to VCC */
+#define NTC_LOWER_OHM		(10000.0f)
 
 #endif /* INC_BMS_TYPES_H_ */

@@ -158,15 +158,52 @@ void PWM_IC_Init(struct PWM_IC_signal* signal,
  * @note   While generally calling this function on an already running PWM signal
  *         is safe, it may cause a short glitch in the signal.
  */
-void PWM_Out_Init(struct PWM_Out_signal *PWM, TIM_HandleTypeDef *htim, uint32_t Channel, float duty,int frequency)
+HAL_StatusTypeDef PWM_Out_Init(struct PWM_Out_signal *PWM, TIM_HandleTypeDef *htim, uint32_t Channel, float duty,int frequency)
 {
+	if (PWM == NULL || htim == NULL) {
+		return HAL_ERROR;
+	}
 
-	HAL_TIM_PWM_Start(htim, Channel);
-	PWM->duty = duty;
-	PWM->Channel = Channel;
+	/*
+	 * Order matters: publish handle/channel BEFORE starting the timer so that
+	 * PWM_Out_setDuty (called below) uses the correct fields, and so the CCR
+	 * preload register holds the requested duty before UEV latches it.
+	 */
+	PWM->htim      = htim;
+	PWM->Channel   = Channel;
 	PWM->frequency = frequency;
-	PWM->htim = htim;
+	PWM->duty      = duty;
+
+	/* Write CCR preload with target duty */
 	PWM_Out_setDuty(PWM, duty);
+
+	/*
+	 * Start CC output + counter. Idempotent: if MX_TIM3_Init already started
+	 * the channel (defensive early start), HAL_TIM_PWM_Start returns HAL_ERROR
+	 * because channel_state == BUSY. That is NOT a real failure here — treat
+	 * "already running" as success.
+	 */
+	HAL_TIM_ChannelStateTypeDef ch_state = TIM_CHANNEL_STATE_GET(htim, Channel);
+	if (ch_state == HAL_TIM_CHANNEL_STATE_READY) {
+		if (HAL_TIM_PWM_Start(htim, Channel) != HAL_OK) {
+			return HAL_ERROR;
+		}
+	} else if (ch_state != HAL_TIM_CHANNEL_STATE_BUSY) {
+		return HAL_ERROR;
+	}
+	/* Ensure timer is enabled regardless of who started the channel */
+	__HAL_TIM_ENABLE(htim);
+
+	/*
+	 * HAL_TIM_PWM_ConfigChannel enables CCRx preload (OCxPE=1), so the value
+	 * we just wrote to CCRx sits in the preload and only loads to the shadow
+	 * on the next Update Event. Trigger a UEV manually so the first PWM cycle
+	 * already reflects the requested duty instead of the reset value (0 = LOW).
+	 */
+	__HAL_TIM_SET_COUNTER(htim, 0);
+	htim->Instance->EGR = TIM_EGR_UG;
+
+	return HAL_OK;
 }
 /**
  * @brief Update PWM duty cycle measurement

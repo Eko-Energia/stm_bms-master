@@ -25,7 +25,6 @@
 /* USER CODE END 0 */
 
 CAN_HandleTypeDef hcan1;
-CAN_HandleTypeDef hcan2;
 
 /* CAN1 init function */
 void MX_CAN1_Init(void)
@@ -55,58 +54,8 @@ void MX_CAN1_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN CAN1_Init 2 */
-  /*
-   * Enable bus-off recovery and retransmission for vehicle CAN robustness.
-   * Re-init applies flags after Cube-generated defaults (may be DISABLE).
-   */
-  hcan1.Init.AutoBusOff = ENABLE;
-  hcan1.Init.AutoRetransmission = ENABLE;
-  if (HAL_CAN_Init(&hcan1) != HAL_OK)
-  {
-    Error_Handler();
-  }
+
   /* USER CODE END CAN1_Init 2 */
-
-}
-/* CAN2 init function */
-void MX_CAN2_Init(void)
-{
-
-  /* USER CODE BEGIN CAN2_Init 0 */
-
-  /* USER CODE END CAN2_Init 0 */
-
-  /* USER CODE BEGIN CAN2_Init 1 */
-
-  /* USER CODE END CAN2_Init 1 */
-  hcan2.Instance = CAN2;
-  hcan2.Init.Prescaler = 4;
-  hcan2.Init.Mode = CAN_MODE_NORMAL;
-  hcan2.Init.SyncJumpWidth = CAN_SJW_1TQ;
-  hcan2.Init.TimeSeg1 = CAN_BS1_13TQ;
-  hcan2.Init.TimeSeg2 = CAN_BS2_4TQ;
-  hcan2.Init.TimeTriggeredMode = DISABLE;
-  hcan2.Init.AutoBusOff = DISABLE;
-  hcan2.Init.AutoWakeUp = DISABLE;
-  hcan2.Init.AutoRetransmission = DISABLE;
-  hcan2.Init.ReceiveFifoLocked = DISABLE;
-  hcan2.Init.TransmitFifoPriority = DISABLE;
-  if (HAL_CAN_Init(&hcan2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN CAN2_Init 2 */
-  /*
-   * Same robustness settings as CAN1 (AutoBusOff + AutoRetransmission).
-   * Re-init after Cube defaults so regenerate does not drop these enables.
-   */
-  hcan2.Init.AutoBusOff = ENABLE;
-  hcan2.Init.AutoRetransmission = ENABLE;
-  if (HAL_CAN_Init(&hcan2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE END CAN2_Init 2 */
 
 }
 
@@ -143,42 +92,17 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /* USER CODE BEGIN CAN1_MspInit 1 */
-
-  /* USER CODE END CAN1_MspInit 1 */
-  }
-  else if(canHandle->Instance==CAN2)
-  {
-  /* USER CODE BEGIN CAN2_MspInit 0 */
-
-  /* USER CODE END CAN2_MspInit 0 */
-    /* CAN2 clock enable */
-    __HAL_RCC_CAN2_CLK_ENABLE();
-    HAL_RCC_CAN1_CLK_ENABLED++;
-    if(HAL_RCC_CAN1_CLK_ENABLED==1){
-      __HAL_RCC_CAN1_CLK_ENABLE();
-    }
-
-    __HAL_RCC_GPIOB_CLK_ENABLE();
-    /**CAN2 GPIO Configuration
-    PB12     ------> CAN2_RX
-    PB13     ------> CAN2_TX
-    */
-    GPIO_InitStruct.Pin = GPIO_PIN_12;
+    /*
+     * Recessive idle on RX so HAL_CAN_Start can see 11 recessive bits (leave INAK).
+     * Cube generates GPIO_NOPULL — override after the generated init.
+     * Do not call AFIO CAN remap macros here: they RMW MAPR and can clear SWJ_CFG
+     * (write-only), which disconnects SWD. Reset mapping is already PA11/PA12.
+     */
+    GPIO_InitStruct.Pin = GPIO_PIN_11;
     GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-    GPIO_InitStruct.Pin = GPIO_PIN_13;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-    /* CAN2 interrupt Init */
-    HAL_NVIC_SetPriority(CAN2_RX0_IRQn, 2, 0);
-    HAL_NVIC_EnableIRQ(CAN2_RX0_IRQn);
-  /* USER CODE BEGIN CAN2_MspInit 1 */
-
-  /* USER CODE END CAN2_MspInit 1 */
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  /* USER CODE END CAN1_MspInit 1 */
   }
 }
 
@@ -202,33 +126,11 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef* canHandle)
     */
     HAL_GPIO_DeInit(GPIOA, GPIO_PIN_11|GPIO_PIN_12);
 
+    /* CAN1 interrupt Deinit */
+    HAL_NVIC_DisableIRQ(CAN1_RX0_IRQn);
   /* USER CODE BEGIN CAN1_MspDeInit 1 */
 
   /* USER CODE END CAN1_MspDeInit 1 */
-  }
-  else if(canHandle->Instance==CAN2)
-  {
-  /* USER CODE BEGIN CAN2_MspDeInit 0 */
-
-  /* USER CODE END CAN2_MspDeInit 0 */
-    /* Peripheral clock disable */
-    __HAL_RCC_CAN2_CLK_DISABLE();
-    HAL_RCC_CAN1_CLK_ENABLED--;
-    if(HAL_RCC_CAN1_CLK_ENABLED==0){
-      __HAL_RCC_CAN1_CLK_DISABLE();
-    }
-
-    /**CAN2 GPIO Configuration
-    PB12     ------> CAN2_RX
-    PB13     ------> CAN2_TX
-    */
-    HAL_GPIO_DeInit(GPIOB, GPIO_PIN_12|GPIO_PIN_13);
-
-    /* CAN2 interrupt Deinit */
-    HAL_NVIC_DisableIRQ(CAN2_RX0_IRQn);
-  /* USER CODE BEGIN CAN2_MspDeInit 1 */
-
-  /* USER CODE END CAN2_MspDeInit 1 */
   }
 }
 

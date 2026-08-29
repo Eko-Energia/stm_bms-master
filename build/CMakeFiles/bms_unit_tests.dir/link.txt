@@ -1,3 +1,0 @@
-"C:\Program Files\CMake\bin\cmake.exe" -E rm -f CMakeFiles\bms_unit_tests.dir/objects.a
-C:\msys64\ucrt64\bin\ar.exe qc CMakeFiles\bms_unit_tests.dir/objects.a @CMakeFiles\bms_unit_tests.dir\objects1.rsp
-C:\msys64\ucrt64\bin\g++.exe -g -Wl,--whole-archive CMakeFiles\bms_unit_tests.dir/objects.a -Wl,--no-whole-archive -o bms_unit_tests.exe -Wl,--out-implib,libbms_unit_tests.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles\bms_unit_tests.dir\linkLibs.rsp

@@ -6,7 +6,7 @@
   */
 
 /*
- *
+ * TODO
  *
  * Error handling both on bus and generic error messages
  * Filter configuration
@@ -23,88 +23,66 @@
 #define ERROR_HANDLER_AVAILABLE (0)
 #endif
 
-/**
- * @brief Initialize CAN peripheral
- *
- * @param hcanPtr   Pointer to CAN handle
- */
-void CAN_Init(CAN_HandleTypeDef *hcanPtr)
+HAL_StatusTypeDef CAN_Init(CAN_HandleTypeDef *hcanPtr)
 {
-	if(CAN2 == hcanPtr->Instance){
-		if (HAL_CAN_ActivateNotification(hcanPtr, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK)
-		{
-			Error_Handler();
-		}
+	if (hcanPtr == NULL)
+	{
+		return HAL_ERROR;
+	}
 
-		CAN_FilterTypeDef filterConfig = {0};
+	/*
+	 * Single-CAN configuration (CAN2 removed).
+	 * Accept-all mask on bank 0 → every incoming ID lands in FIFO0.
+	 * SlaveStartFilterBank stays at 14 for backwards-compatibility with any
+	 * future re-introduction of CAN2; it has no effect when CAN2 is disabled.
+	 */
+	CAN_FilterTypeDef filterConfig = {0};
 
-		/*
-		 * CAN2 RX filters (SlaveStartFilterBank = 14 on F105 connectivity line):
-		 *   Bank 14 → SAFE_STATE StdId = 1 (exact match)
-		 *   Bank 15 → thermistor StdIds 0x200..0x27F (mask); app still bounds-checks pcb/therm
-		 * StdId is placed in FilterIdHigh[15:5] for 32-bit scale filters.
-		 */
+	filterConfig.FilterBank            = 0;
+	filterConfig.FilterMode            = CAN_FILTERMODE_IDMASK;
+	filterConfig.FilterScale           = CAN_FILTERSCALE_32BIT;
+	filterConfig.FilterIdHigh          = 0x0000;
+	filterConfig.FilterIdLow           = 0x0000;
+	filterConfig.FilterMaskIdHigh      = 0x0000;
+	filterConfig.FilterMaskIdLow       = 0x0000;
+	filterConfig.FilterFIFOAssignment  = CAN_RX_FIFO0;
+	filterConfig.FilterActivation      = ENABLE;
+	filterConfig.SlaveStartFilterBank  = 14;
 
-		/* ----- Filter bank 14: SAFE_STATE_ID (1) exact ----- */
-		filterConfig.FilterBank = 14;
-		filterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
-		filterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
-		filterConfig.FilterIdHigh = (1U << 5);				/* StdId = 1 */
-		filterConfig.FilterIdLow = 0x0000;
-		filterConfig.FilterMaskIdHigh = (0x7FFU << 5);		/* all 11 StdId bits must match */
-		filterConfig.FilterMaskIdLow = 0x0000;
-		filterConfig.FilterFIFOAssignment = CAN_RX_FIFO0;
-		filterConfig.FilterActivation = ENABLE;
-		filterConfig.SlaveStartFilterBank = 14;
-
-		if (HAL_CAN_ConfigFilter(hcanPtr, &filterConfig) != HAL_OK)
-		{
-			Error_Handler();
-		}
-
-		/* ----- Filter bank 15: thermistor StdIds (software bounds-checks pcb/therm).
-		 * IDs are decimal 211..279 (BASE 200 + pcb*10 + therm), NOT hex 0x200.
-		 * Mask don't-care on StdId; SAFE_STATE is exact-matched on bank 14.
-		 */
-		filterConfig.FilterBank = 15;
-		filterConfig.FilterIdHigh = 0x0000;
-		filterConfig.FilterIdLow = 0x0000;
-		filterConfig.FilterMaskIdHigh = 0x0000;		/* accept any StdId; app filters map */
-		filterConfig.FilterMaskIdLow = 0x0000;
-
-		if (HAL_CAN_ConfigFilter(hcanPtr, &filterConfig) != HAL_OK)
-		{
-			Error_Handler();
-		}
+	if (HAL_CAN_ConfigFilter(hcanPtr, &filterConfig) != HAL_OK)
+	{
+		return HAL_ERROR;
 	}
 
 	if (HAL_CAN_Start(hcanPtr) != HAL_OK)
 	{
-		Error_Handler();
+		return HAL_ERROR;
 	}
+
+	/* RX FIFO0 pending IRQ — thermistor / safe-state frames handled in HAL_CAN_RxFifo0MsgPendingCallback */
+	if (HAL_CAN_ActivateNotification(hcanPtr, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK)
+	{
+		return HAL_ERROR;
+	}
+
+	return HAL_OK;
 }
 
-/**
- * @brief Add new message to the periodic buffer
- *
- * @param msg      Pointer to the message to add
- * @param buffer   Pointer to the buffer that holds messages
- * @retval HAL_StatusTypeDef   State of the operation
- */
-HAL_StatusTypeDef CAN_AddScheduledMsg(const struct CAN_scheduledMsg *msg, struct CAN_scheduledMsgList *buffer)
+HAL_StatusTypeDef CAN_AddScheduledMsg(struct CAN_scheduledMsg *msg, struct CAN_scheduledMsgList *buffer)
 {
 	// basic error checking
 	if (buffer->size >= CAN_MAX_MSG)
 	{
-		Error_Handler();
+		return HAL_ERROR;
 	}
 	if (msg->periodMs == 0)
 	{
-		Error_Handler();
+		return HAL_ERROR;
 	}
 
 	struct CAN_scheduledMsg tempMsg = *msg;
 	tempMsg.lastTick = HAL_GetTick();
+	tempMsg.txFailCount = 0;
 
 	// check if id already exists in the buffer
 	for (uint8_t i = 0; i < buffer->size; i++)
@@ -121,13 +99,6 @@ HAL_StatusTypeDef CAN_AddScheduledMsg(const struct CAN_scheduledMsg *msg, struct
 	return HAL_OK;
 }
 
-/**
- * @brief Remove message from the periodic buffer
- *
- * @param id       ID of the message to remove
- * @param buffer   Pointer to the buffer that holds messages
- * @retval HAL_StatusTypeDef   State of the operation
- */
 HAL_StatusTypeDef CAN_RemoveScheduledMsg(uint32_t id, struct CAN_scheduledMsgList *buffer)
 {
 	for (uint8_t i = 0; i < buffer->size; i++)
@@ -148,12 +119,6 @@ HAL_StatusTypeDef CAN_RemoveScheduledMsg(uint32_t id, struct CAN_scheduledMsgLis
 	return HAL_ERROR;
 }
 
-/**
- * @brief Process all scheduled CAN messages (call in main loop)
- *
- * @param hcanPtr      Pointer to CAN handle
- * @param scheduler    Pointer to the message scheduler
- */
 void CAN_HandleScheduled(CAN_HandleTypeDef *hcanPtr, struct CAN_scheduledMsgList *scheduler)
 {
 	if (hcanPtr == NULL || scheduler == NULL)
@@ -165,7 +130,8 @@ void CAN_HandleScheduled(CAN_HandleTypeDef *hcanPtr, struct CAN_scheduledMsgList
 	for (uint8_t i = 0; i < scheduler->size; i++)
 	{
 		struct CAN_scheduledMsg *msg = &scheduler->list[i];
-		if (currentTick > msg->lastTick + msg->periodMs)
+		// unsigned difference stays correct across the HAL_GetTick() wrap
+		if ((currentTick - msg->lastTick) >= msg->periodMs)
 		{
 			uint8_t data[CAN_MAX_DLC];
 			// Initialize data to 0 to be safe
@@ -181,10 +147,99 @@ void CAN_HandleScheduled(CAN_HandleTypeDef *hcanPtr, struct CAN_scheduledMsgList
 			
 			if (HAL_CAN_AddTxMessage(hcanPtr, &msg->header, data, &scheduler->txMailbox) != HAL_OK)
 			{
-				return;
+				/*
+				 * No free mailbox, or the peripheral is not ready. Re-arm so this
+				 * message waits a full period before trying again - leaving
+				 * lastTick stale would make the branch above true on every main
+				 * loop iteration and turn the period into a busy retry. Skip only
+				 * this message, so one blocked frame cannot starve the rest.
+				 */
+				msg->lastTick = currentTick;
+
+				// saturate rather than wrap, so CAN_TX_FAIL_LIMIT stays
+				// usable over its whole range instead of being capped by the
+				// width of the counter
+				if (msg->txFailCount < UINT32_MAX)
+				{
+					msg->txFailCount++;
+				}
+
+				/*
+				 * All three mailboxes stuck for several periods in a row. With
+				 * automatic retransmission enabled an unacknowledged frame is
+				 * retried forever and never releases its mailbox, so drop the
+				 * pending requests to let the queue drain. On a mailbox that is
+				 * mid-transmission the abort takes effect at the end of the
+				 * current attempt.
+				 */
+				if ((CAN_TX_FAIL_LIMIT != 0U) && (msg->txFailCount >= CAN_TX_FAIL_LIMIT))
+				{
+					HAL_CAN_AbortTxRequest(hcanPtr, CAN_TX_MAILBOX0 | CAN_TX_MAILBOX1 | CAN_TX_MAILBOX2);
+					msg->txFailCount = 0;
+				}
+
+				continue;
 			}
 
-			msg->lastTick = HAL_GetTick();
+			msg->txFailCount = 0;
+
+			/*
+			 * Advance by whole periods so the cadence does not drift with the
+			 * execution time of the send, and resynchronise if we fell more than
+			 * one period behind, to avoid a catch-up burst after a long stall.
+			 */
+			msg->lastTick += msg->periodMs;
+			if ((currentTick - msg->lastTick) >= msg->periodMs)
+			{
+				msg->lastTick = currentTick;
+			}
 		}
 	}
+}
+
+HAL_StatusTypeDef CAN_AddIncomingMsg(struct CAN_IncomingMsgList *buffer, CAN_RxHeaderTypeDef *header, uint8_t *data)
+{
+	if (buffer == NULL || header == NULL || data == NULL)
+	{
+		return HAL_ERROR;
+	}
+
+	if (buffer->count >= CAN_MAX_MSG)
+	{
+		return HAL_ERROR;
+	}
+
+	struct CAN_IncomingMsg *dst = &buffer->list[buffer->head];
+	dst->header = *header;
+	memcpy(dst->data, data, CAN_MAX_DLC);
+
+	buffer->head = (buffer->head + 1) % CAN_MAX_MSG;
+	buffer->count++;
+	buffer->receiveFlag = 1;
+
+	return HAL_OK;
+}
+
+HAL_StatusTypeDef CAN_GetLatestMessage(struct CAN_IncomingMsgList *buffer, struct CAN_IncomingMsg *msg)
+{
+	if (buffer == NULL || msg == NULL)
+	{
+		return HAL_ERROR;
+	}
+
+	if (buffer->count == 0)
+	{
+		return HAL_ERROR;
+	}
+
+	*msg = buffer->list[buffer->tail];
+	buffer->tail = (buffer->tail + 1) % CAN_MAX_MSG;
+	buffer->count--;
+
+	if (buffer->count == 0)
+	{
+		buffer->receiveFlag = 0;
+	}
+
+	return HAL_OK;
 }

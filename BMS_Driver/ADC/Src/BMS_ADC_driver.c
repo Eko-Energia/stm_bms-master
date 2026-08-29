@@ -51,18 +51,70 @@ HAL_StatusTypeDef BMS_ADC_ReadValues(BMS_TypeDef* bms){
 
 HAL_StatusTypeDef BMS_ADC_Read_Voltage(BMS_TypeDef* bms){
 
-	float voltage_f = 0.0f; // real type of voltage
+	volatile float voltage_f = 0.0f; // real type of voltage on PC2
+	volatile HAL_StatusTypeDef voltage_read_status;
 
 	// calculating real value of voltage
-	if(ADC_Get_PinVoltage(bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, ADC_CHANNEL_12, &voltage_f) != HAL_OK){
+	voltage_read_status = ADC_Get_PinVoltage(bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, ADC_CHANNEL_12, (float *)&voltage_f);
+	if(voltage_read_status != HAL_OK){
 		return HAL_ERROR;
 	}
 
-	// Calculating voltage before voltage divider
-	voltage_f *= 28.362637362637362637362637362637f;
+	volatile float vcc_f = ((R1 / R2) + 1.0f) * (voltage_f + 0.38f);
+	volatile float vcc_supply_f = 0.0f;
+
+	/* Piecewise-linear calibration from measured divider voltage to pack voltage. */
+	static const float measured_vcc[] = {
+		53.31f, 59.60f, 60.50f, 60.80f, 61.00f,
+		61.20f, 61.70f, 62.00f, 62.40f, 62.80f,
+		63.10f, 63.50f, 63.80f, 64.10f, 64.40f,
+		64.70f, 65.00f, 65.30f, 65.60f, 65.80f,
+		66.10f, 66.40f, 66.60f, 66.90f, 67.10f,
+		67.30f, 67.50f, 67.80f, 68.00f, 87.00f, 89.40f
+	};
+	static const float supply_vcc[] = {
+		47.00f, 47.00f, 58.00f, 60.00f, 60.50f,
+		62.00f, 63.00f, 64.00f, 65.00f, 66.00f,
+		67.00f, 68.00f, 69.00f, 70.00f, 71.00f,
+		72.00f, 73.00f, 74.00f, 75.00f, 76.00f,
+		77.00f, 78.00f, 79.00f, 80.00f, 81.00f,
+			82.00f, 83.00f, 84.00f, 85.00f, 86.00f, 87.00f
+	};
+	const uint8_t calibration_points = sizeof(measured_vcc) / sizeof(measured_vcc[0]);
+
+	if (vcc_f <= measured_vcc[0])
+	{
+		vcc_supply_f = supply_vcc[0] + (vcc_f - measured_vcc[0]);
+	}
+	else
+	{
+		uint8_t i;
+
+		for (i = 1; i < calibration_points; i++)
+		{
+			if (vcc_f <= measured_vcc[i])
+			{
+				vcc_supply_f = supply_vcc[i - 1] +
+					(supply_vcc[i] - supply_vcc[i - 1]) *
+					(vcc_f - measured_vcc[i - 1]) /
+					(measured_vcc[i] - measured_vcc[i - 1]);
+				break;
+			}
+		}
+
+		if (i == calibration_points)
+		{
+			/* Continue the final calibration slope instead of clamping to 87 V. */
+			vcc_supply_f = supply_vcc[calibration_points - 2] +
+				(supply_vcc[calibration_points - 1] - supply_vcc[calibration_points - 2]) *
+				(vcc_f - measured_vcc[calibration_points - 2]) /
+				(measured_vcc[calibration_points - 1] - measured_vcc[calibration_points - 2]);
+		}
+	}
+
 
 	// scaling real value with factor and offset
-	if(BMS_CAN_ScallingParams(bms, ADC_VOLTAGE_CH, &voltage_f) != HAL_OK){
+	if(BMS_CAN_ScallingParams(bms, ADC_VOLTAGE_CH, vcc_supply_f) != HAL_OK){
 		return HAL_ERROR;
 	}
 
@@ -72,16 +124,18 @@ HAL_StatusTypeDef BMS_ADC_Read_Voltage(BMS_TypeDef* bms){
 HAL_StatusTypeDef BMS_ADC_Read_Temperature(BMS_TypeDef* bms){
 
 	float voltage_f     = 0.0f;		// real value of voltage on stm32's pin: PC0
-	float Rt            = 0.0f;		// resistance of thermistor
+	volatile float Rt   = 0.0f;		// resistance of thermistor
 	float temperature_f = 0.0f;		// calculated temperature
 
 	// calculating voltage before voltage divider
 	if(ADC_Get_PinVoltage(bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, ADC_TEMP_CH, &voltage_f) != HAL_OK){
-		return HAL_ERROR;
+		return BMS_CAN_ScallingParams(bms, ADC_TEMP_CH, 0.0f);
 	}
 
-	// calculating resistance
-	Rt = 10000.0f * (STM32_VCC / voltage_f - 1);
+	if(voltage_f <= 0.05f || voltage_f >= (STM32_VCC - 0.05f)){
+		return BMS_CAN_ScallingParams(bms, ADC_TEMP_CH, 0.0f);
+	}
+	Rt = NTC_LOWER_OHM * (STM32_VCC / voltage_f - 1.0f);
 
 	// Calculating and calibrating temperature
 	temperature_f = BMS_ADC_NTC_GetTemperature(Rt);
@@ -98,7 +152,7 @@ HAL_StatusTypeDef BMS_ADC_Read_Temperature(BMS_TypeDef* bms){
 #endif
 
 	// converting real value of temperature with factor and offset to achieve type of value, which is ready to be sent via CAN1
-	if(BMS_CAN_ScallingParams(bms, ADC_TEMP_CH, &temperature_f) != HAL_OK){
+ 	if(BMS_CAN_ScallingParams(bms, ADC_TEMP_CH, temperature_f) != HAL_OK){
 		return HAL_ERROR;
 	}
 
@@ -107,20 +161,25 @@ HAL_StatusTypeDef BMS_ADC_Read_Temperature(BMS_TypeDef* bms){
 }
 
 HAL_StatusTypeDef BMS_ADC_Read_Current(BMS_TypeDef* bms){
-	uint16_t current_b = 0;     // binary type of current
-	float current_f    = 0.0f;  // real type of current
+	float current_pin_v  = 0.0f;  // voltage measured by the ADC after the divider
+	float sensor_v       = 0.0f;  // reconstructed sensor output voltage
+	float current_f      = 0.0f;  // current in amperes
 
-	// reading channel's value
-	if(ADC_ReadChannel(bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, ADC_CURRENT_CH, &current_b) != HAL_OK){
+	// Read the ADC pin voltage instead of using the raw ADC count as amperes.
+	if(ADC_Get_PinVoltage(bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1, ADC_CURRENT_CH, &current_pin_v) != HAL_OK){
 		return HAL_ERROR;
 	}
 
-	// Reserved for ADC current measurement tests (no active test code here).
-	// calculating real value of current
-	current_f = ((float)current_b - 2108.0f)/4.0f;
+	/*
+	 * L01Z300S05: 0..5 V output represents -300..+300 A.
+	 * R19/R27 attenuate the sensor output before it reaches the 3.3 V ADC.
+	 */
+	sensor_v = current_pin_v * (float)((R19 + R27) / R27);
+	current_f = (sensor_v - 2.5f) * (600.0f / 5.0f) + CURRENT_SENSOR_OFFSET_A;
+	current_f = current_f * CURRENT_CALIBRATION_GAIN + CURRENT_CALIBRATION_OFFSET_A;
 
 	// converting real value into value, ready to be send via CAN1
-	if(BMS_CAN_ScallingParams(bms, ADC_CURRENT_CH, &current_f) != HAL_OK){
+	if(BMS_CAN_ScallingParams(bms, ADC_CURRENT_CH, current_f) != HAL_OK){
 		return HAL_ERROR;
 	}
 
