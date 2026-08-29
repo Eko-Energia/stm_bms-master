@@ -97,6 +97,7 @@ int main(void)
   MX_DMA_Init();
   MX_ADC1_Init();
   MX_CAN1_Init();
+  MX_CAN2_Init();
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
   MX_TIM3_Init();
@@ -107,7 +108,7 @@ int main(void)
 
   /*BMS---------------------------------------------------------*/
   /* Init BMS object + start CAN/ADC/PWM/EH. On failure enter error mode. */
-  if(BMS_Init(&bms, &hcan1, &hadc1, &huart1, &htim3) != HAL_OK){
+  if(BMS_Init(&bms, &hcan1, &hadc1, &huart2, &htim3) != HAL_OK){
 	  BMS_Mode_Change(&bms, BMS_Error);
   }
 
@@ -208,9 +209,9 @@ static void MX_NVIC_Init(void)
   /* DMA1_Channel1_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 3, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
-  /* CAN1_RX0_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(CAN1_RX0_IRQn, 2, 0);
-  HAL_NVIC_EnableIRQ(CAN1_RX0_IRQn);
+  /* CAN2_RX0_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(CAN2_RX0_IRQn, 2, 0);
+  HAL_NVIC_EnableIRQ(CAN2_RX0_IRQn);
 }
 
 /* USER CODE BEGIN 4 */

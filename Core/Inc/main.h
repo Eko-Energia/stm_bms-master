@@ -89,6 +89,8 @@ void Error_Handler(void);
 #define AM_GPIO_Port GPIOC
 #define CD_Pin GPIO_PIN_8
 #define CD_GPIO_Port GPIOA
+#define nCAN2_Stby_Pin GPIO_PIN_10
+#define nCAN2_Stby_GPIO_Port GPIOC
 #define nCAN1_Stby_Pin GPIO_PIN_11
 #define nCAN1_Stby_GPIO_Port GPIOC
 #define RED_LD_Pin GPIO_PIN_8
