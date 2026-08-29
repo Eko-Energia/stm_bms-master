@@ -15,14 +15,20 @@
   */
 
 #include "BMS_CAN_driver.h"
-w#include <math.h>
+#include <math.h>
 
 /* Variables ---------------------------------------------------------*/
-extern BMS_TypeDef 		   bms;								//< Init BMS object
-static volatile uint8_t    rxMsgReceived;					//< Declaration of flag that indicates status of received CAN2 frame
+extern BMS_TypeDef 		   bms;										//< Init BMS object
+static volatile uint8_t    rxMsgReceived;						//< Declaration of flag that indicates status of received CAN2 frame
 
 static CAN_RxHeaderTypeDef RxHeader = {0};				    //< Init header for Rx frame
 static uint8_t 			   rxData[8] = {0};				    //< Init data storage for Rx frame's data
+static uint8_t 			   thermFiltered[BMS_THERM_PCB_COUNT][BMS_THERM_PER_PCB] = {{0}};
+static uint8_t 			   thermFilterInit[BMS_THERM_PCB_COUNT][BMS_THERM_PER_PCB] = {{0}};
+
+static uint8_t BMS_CAN_FilterThermValue(uint8_t previous, uint8_t current){
+	return (uint8_t)(((uint16_t)previous * 7U) + (uint16_t)current) / 8U;
+}
 
 
 /* Functions' bodies -------------------------------------------------*/
@@ -272,8 +278,19 @@ HAL_StatusTypeDef BMS_CAN_HandleRxMsg(BMS_TypeDef *bms){
 		return HAL_OK;
 	}
 
-	/* Convert raw payload byte to temperature [°C] */
-	float thermTemperature = (float)rxByte * THERM_TEMPERATURE_GAIN;
+	/* Smooth the incoming CAN2 thermistor byte to suppress noisy spikes and make the bus values more uniform. */
+	uint8_t filteredRxByte = rxByte;
+	uint8_t *filteredCell = &bms->bmsCAN.CAN2_temperatureCells[pcbIndex - 1][thermIndex - 1];
+	if(thermFilterInit[pcbIndex - 1][thermIndex - 1] != 0U){
+		filteredRxByte = BMS_CAN_FilterThermValue(thermFiltered[pcbIndex - 1][thermIndex - 1], rxByte);
+	} else {
+		thermFilterInit[pcbIndex - 1][thermIndex - 1] = 1U;
+	}
+	thermFiltered[pcbIndex - 1][thermIndex - 1] = filteredRxByte;
+	*filteredCell = filteredRxByte;
+
+	/* Convert filtered payload byte to temperature [°C] */
+	float thermTemperature = (float)filteredRxByte * THERM_TEMPERATURE_GAIN;
 
 #ifdef PROD
 	/* Production path: escalate over-temperature via error handler (fault policy TBD later) */
@@ -282,9 +299,6 @@ HAL_StatusTypeDef BMS_CAN_HandleRxMsg(BMS_TypeDef *bms){
 		return HAL_ERROR;
 	}
 #endif
-
-	/* Store latest raw byte for this (pcb, therm) — used by CAN1 therm group TX */
-	bms->bmsCAN.CAN2_temperatureCells[pcbIndex - 1][thermIndex - 1] = rxByte;
 
 	/* Update running max for the current scan (duplicates may raise scanMax) */
 	if(thermTemperature > scanMax){

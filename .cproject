@@ -55,6 +55,7 @@
 									<listOptionValue builtIn="false" value="../EKO_Drivers/Error_Corrutines/Inc"/>
 									<listOptionValue builtIn="false" value="../EKO_Drivers/PWM/Inc"/>
 									<listOptionValue builtIn="false" value="../BMS_Driver/PWM/Inc"/>
+									<listOptionValue builtIn="false" value="../BMS_Driver/BMS-JK/Inc"/>
 								</option>
 								<option id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.option.warnings.treataserror.1965576808" name="Treat warnings as errors (-Werror)" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.option.warnings.treataserror" useByScannerDiscovery="false" value="true" valueType="boolean"/>
 								<inputType id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c.287154148" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c"/>
@@ -82,13 +83,14 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="BMS_Driver/BMS/Src"/>
-						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="BMS_Driver/PWM/Src"/>
-						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="EKO_Drivers"/>
 						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="BMS_Driver/ADC/Src"/>
+						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="BMS_Driver/BMS-JK/Src"/>
+						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="BMS_Driver/BMS/Src"/>
 						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="BMS_Driver/CAN/Src"/>
+						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="BMS_Driver/PWM/Src"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Core"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Drivers"/>
+						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="EKO_Drivers"/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>

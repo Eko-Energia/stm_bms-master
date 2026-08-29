@@ -19,6 +19,7 @@
 #include "BMS_ADC_driver.h"
 #include "BMS_CAN_driver.h"
 #include "BMS_PWM.h"
+#include "usart.h"
 
 /* Variables ---------------------------------------------------------------------------------  */
 extern uint32_t lastTick;
@@ -42,6 +43,7 @@ HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, ADC_Han
 	bms->bmsCAN.bhcan1      = bhcan1;
 	bms->errorLogger.huart1 = huart;
 	bms->bpwm.htim.htim 	= htim;
+	BMS_JK_Init(&bms->bmsJK, &huart2, RS_DIR_GPIO_Port, RS_DIR_Pin, RE_DIR_GPIO_Port, RE_DIR_Pin);
 	BMS_RS485_Init(bms);
 
 	// setting default status (normal) for BMS
@@ -182,6 +184,31 @@ HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms){
 	// Handling FAN controller
 	if(BMS_FAN_Control(bms) != HAL_OK){
 		return HAL_ERROR;
+	}
+
+	// Poll JK BMS on the dedicated RS485/UART link, if present.
+	if (bms->bmsJK.initialized != 0U) {
+		uint8_t jkCmd = BMS_JK_GetNextPollCommand(&bms->bmsJK);
+		uint8_t responseValid = 0U;
+		uint8_t payloadZero = 0U;
+		uint8_t decodeOk = 0U;
+		uint8_t snapshotOk = 0U;
+
+		if (BMS_JK_SendRequest(&bms->bmsJK, jkCmd, 50U) == HAL_OK) {
+			if (BMS_JK_ReceiveResponse(&bms->bmsJK, 100U) == HAL_OK) {
+				if (bms->bmsJK.rxLen > 0U) {
+					responseValid = BMS_JK_ValidateResponseFrame(bms->bmsJK.rxBuffer, bms->bmsJK.rxLen, jkCmd);
+					if (responseValid != 0U) {
+						decodeOk = (BMS_JK_DecodeFrame(&bms->bmsJK, bms->bmsJK.rxBuffer, bms->bmsJK.rxLen) == HAL_OK) ? 1U : 0U;
+						if (decodeOk != 0U) {
+							snapshotOk = BMS_JK_IsSnapshotValidForCommand(&bms->bmsJK.snapshot, jkCmd);
+							payloadZero = (snapshotOk == 0U) ? 1U : 0U;
+						}
+					}
+					BMS_JK_ApplyReadoutDecision(&bms->bmsJK, jkCmd, responseValid, payloadZero, decodeOk, snapshotOk);
+				}
+			}
+		}
 	}
 
 	return HAL_OK;

@@ -31,6 +31,7 @@
 #include "can_driver.h"
 #include "error_handler.h"
 #include "pwm_driver.h"
+#include "BMS_JK.h"
 
 /* Typedefs ----------------------------------------------------------------------------------  */
 
@@ -135,7 +136,8 @@ typedef struct{
 
 	BMS_ErrorLoggerTypeDef errorLogger;														/*< Error logger typedef's object>*/
 
-	CAN_BMSTypeDef 		   bmsCAN;															/*< BMS's CAN 	 custom typedef object>*/
+	BMS_JK_HandleTypeDef   bmsJK;																	/*< JK BMS telemetry snapshot and RS485 state for debugging>*/
+	CAN_BMSTypeDef 		   bmsCAN;																	/*< BMS's CAN 	 custom typedef object>*/
 	ADC_BMSTypeDef 		   bmsADC;															/*< BMS's ADC 	 custom typedef object>*/
 
 	EH_HandleTypeDef       beh;																/*< BMS's handle to error handler >*/
