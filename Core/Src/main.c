@@ -99,7 +99,6 @@ int main(void)
   MX_CAN1_Init();
   MX_CAN2_Init();
   MX_USART1_UART_Init();
-  MX_USART2_UART_Init();
   MX_TIM3_Init();
 
   /* Initialize interrupts */
@@ -108,7 +107,7 @@ int main(void)
 
   /*BMS---------------------------------------------------------*/
   /* Init BMS object + start CAN/ADC/PWM/EH. On failure enter error mode. */
-  if(BMS_Init(&bms, &hcan1, &hadc1, &huart2, &htim3) != HAL_OK){
+  if(BMS_Init(&bms, &hcan1, &hadc1, &huart1, &htim3) != HAL_OK){
 	  BMS_Mode_Change(&bms, BMS_Error);
   }
 
@@ -126,12 +125,13 @@ int main(void)
 	  /* Status LED blink (green = normal, red = error) */
 	  BMS_Mode_LEDBlink(&bms);
 
+	  /* JK RS485 always polled (bring-up) — even in BMS_Error */
+	  (void)BMS_JK_Normal(&bms.bmsJK);
+
 	  /*
 	   * Mode dispatch:
-	   *   BMS_NORMAL → ADC / CAN2 RX / CAN1 TX / relay PWM / HVIL / FAN
-	   *   BMS_Error  → stop sensing path, PWM sleep stub (full faults later)
-	   * Never call BMS_Mode_Change(Error) as the loop condition — that stops
-	   * peripherals every pass and breaks Normal operation.
+	   *   BMS_NORMAL → ADC / CAN / PWM / HVIL / FAN
+	   *   BMS_Error  → stop sensing path, PWM sleep stub
 	   */
 	  if(bms.status == BMS_NORMAL){
 		  if(BMS_Mode_Normal(&bms) != HAL_OK){

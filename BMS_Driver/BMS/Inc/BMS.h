@@ -114,10 +114,8 @@ HAL_StatusTypeDef BMS_Start_Peripherals(BMS_TypeDef* bms);
   */
 HAL_StatusTypeDef BMS_Stop_Peripherals(BMS_TypeDef* bms);
 
-/* RS485 transport helpers. These are optional and do not affect BMS mode status. */
+/* RS485 DIR pins idle (RX). JK TX/RX is handled by BMS_JK_*. */
 void BMS_RS485_Init(BMS_TypeDef* bms);
-HAL_StatusTypeDef BMS_RS485_Transmit(BMS_TypeDef* bms, uint8_t* data, uint16_t size, uint32_t timeout);
-HAL_StatusTypeDef BMS_RS485_Receive(BMS_TypeDef* bms, uint8_t* data, uint16_t size, uint32_t timeout);
 
 /*
 	 ==============================================================================

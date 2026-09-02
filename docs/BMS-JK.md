@@ -4,7 +4,7 @@ This note defines the project-side trigger commands and the CAN frames used to e
 
 ## 1) UART / RS485 trigger commands
 
-The JK link is routed through USART2 and the RS485 driver (`RS_DIR` / `RE_DIR`). The BM_JK app should trigger a read operation by sending one of the following request commands on the UART side.
+The JK link is routed through USART1 (PA9/PA10) and the RS485 driver (`RS_DIR` / `RE_DIR`). The BM_JK app should trigger a read operation by sending one of the following request commands on the UART side.
 
 These are intentionally kept simple and deterministic so they can be mapped directly to a request/response flow in the Python app.
 
@@ -40,11 +40,16 @@ The exact CRC implementation may stay app-defined (`XOR`, `CRC16-CCITT`, or `sum
 
 ### RS485 direction handling
 
-For the STM32 side:
+Board pins (MAX485-style half-duplex):
 
-- `RS_DIR = 1` => transmit request to JK BMS
-- `RS_DIR = 0` => receive response
-- `RE_DIR` should follow the same direction policy as the transceiver enable
+| Mode | `RS_DIR` (PC4 / DE) | `RE_DIR` (PC5 / /RE) | Meaning |
+|------|---------------------|----------------------|---------|
+| TX   | 1                   | 1                    | driver ON, receiver OFF |
+| RX   | 0                   | 0                    | driver OFF, receiver ON |
+
+Switch order: TX → mute `/RE` then assert `DE`; RX → drop `DE` then assert `/RE`.
+
+If UART DI shows TX frames but RO stays idle, probe PC4/PC5 during RX (both must be low). If `RE_DIR` is wired as active-HIGH receiver enable, rebuild with `BMS_JK_INVERT_RE=1`.
 
 The BM_JK Python app can be configured to send one command, wait for the response, and then forward the decoded values into the CAN payload format below.
 

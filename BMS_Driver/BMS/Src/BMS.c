@@ -46,6 +46,18 @@ HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, ADC_Han
 	memset(&bms->bmsCAN.CAN1_Buff, 0, sizeof(bms->bmsCAN.CAN1_Buff));
 
 	/*
+	 * JK RS485 MUST be initialized before PWM/CAN/ADC.
+	 * If a later peripheral fails, main still enters BMS_Error — JK poll
+	 * must already have a valid huart or TransmitRequest is a no-op.
+	 * UART handle from main is USART1 (huart1).
+	 */
+	BMS_RS485_Init(bms);
+	if(huart != NULL){
+		(void)BMS_JK_Init(&bms->bmsJK, huart, RS_DIR_GPIO_Port, RS_DIR_Pin,
+		                  RE_DIR_GPIO_Port, RE_DIR_Pin);
+	}
+
+	/*
 	 * PWM MUST be brought up before any other peripheral.
 	 */
 	if(BMS_PWM_Init(bms, htim) != HAL_OK){
@@ -78,11 +90,6 @@ HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, ADC_Han
     // Setting default state of FAN
     bms->fanState = OFF;
 
-    // Initialize RS485 pins first, then JK driver locks the transceiver
-    // into strict RX (listening) mode: DE=0, RE=0.
-    BMS_RS485_Init(bms);
-    (void)BMS_JK_Init(&bms->bmsJK, &huart1, RS_DIR_GPIO_Port, RS_DIR_Pin, RE_DIR_GPIO_Port, RE_DIR_Pin);
-
 	return HAL_OK;
 }
 
@@ -90,28 +97,9 @@ void BMS_RS485_Init(BMS_TypeDef* bms){
 	if(bms == NULL){
 		return;
 	}
-
+	/* Default half-duplex listen: DE=0, /RE=0 */
 	HAL_GPIO_WritePin(RS_DIR_GPIO_Port, RS_DIR_Pin, GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(RE_DIR_GPIO_Port, RE_DIR_Pin, GPIO_PIN_RESET);
-}
-
-HAL_StatusTypeDef BMS_RS485_Transmit(BMS_TypeDef* bms, uint8_t* data, uint16_t size, uint32_t timeout){
-	/* SCOPE-DEBUG: transmission is intentionally disabled to keep the
-	 * transceiver locked in RX mode while sniffing PC-generated frames.
-	 * The PC USB-RS485 adapter is the sole transmitter on the bus. */
-	(void)bms; (void)data; (void)size; (void)timeout;
-	return HAL_OK;
-}
-
-HAL_StatusTypeDef BMS_RS485_Receive(BMS_TypeDef* bms, uint8_t* data, uint16_t size, uint32_t timeout){
-	if(bms == NULL || bms->errorLogger.huart1 == NULL || data == NULL || size == 0U){
-		return HAL_ERROR;
-	}
-
-	HAL_GPIO_WritePin(RS_DIR_GPIO_Port, RS_DIR_Pin, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(RE_DIR_GPIO_Port, RE_DIR_Pin, GPIO_PIN_RESET);
-
-	return HAL_UART_Receive(bms->errorLogger.huart1, data, size, timeout);
 }
 
 /*
@@ -132,6 +120,8 @@ HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms){
 
 		bms->prevStatus = BMS_NORMAL;
 	}
+
+	/* JK polled from main() every loop (incl. error mode). */
 
 	// Read ADC's channels
 	if(BMS_ADC_ReadValues(bms) != HAL_OK){
@@ -161,13 +151,12 @@ HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms){
 		return HAL_ERROR;
 	}
 
-	// Sniff JK-BMS RS485 bus (non-blocking; buffers bytes and decodes on gap)
-	(void)BMS_JK_ReceiveHandler(&bms->bmsJK);
-
 	return HAL_OK;
 }
 
 HAL_StatusTypeDef BMS_Mode_Error(BMS_TypeDef* bms){
+
+	/* JK RX/TX is invoked from main() every loop (not here). */
 
 	if(bms->prevStatus != BMS_Error){
 
