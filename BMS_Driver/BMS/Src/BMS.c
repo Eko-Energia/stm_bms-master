@@ -78,9 +78,10 @@ HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, ADC_Han
     // Setting default state of FAN
     bms->fanState = OFF;
 
-    // Initializing JK-BMS RS485 Link and Transceiver Pins
-    BMS_JK_Init(&bms->bmsJK, &huart1, RS_DIR_GPIO_Port, RS_DIR_Pin, RE_DIR_GPIO_Port, RE_DIR_Pin);
+    // Initialize RS485 pins first, then JK driver locks the transceiver
+    // into strict RX (listening) mode: DE=0, RE=0.
     BMS_RS485_Init(bms);
+    (void)BMS_JK_Init(&bms->bmsJK, &huart1, RS_DIR_GPIO_Port, RS_DIR_Pin, RE_DIR_GPIO_Port, RE_DIR_Pin);
 
 	return HAL_OK;
 }
@@ -95,22 +96,11 @@ void BMS_RS485_Init(BMS_TypeDef* bms){
 }
 
 HAL_StatusTypeDef BMS_RS485_Transmit(BMS_TypeDef* bms, uint8_t* data, uint16_t size, uint32_t timeout){
-	HAL_StatusTypeDef status;
-
-	if(bms == NULL || bms->errorLogger.huart1 == NULL || data == NULL || size == 0U){
-		return HAL_ERROR;
-	}
-
-	HAL_GPIO_WritePin(RE_DIR_GPIO_Port, RE_DIR_Pin, GPIO_PIN_SET);
-	HAL_GPIO_WritePin(RS_DIR_GPIO_Port, RS_DIR_Pin, GPIO_PIN_SET);
-	status = HAL_UART_Transmit(bms->errorLogger.huart1, data, size, timeout);
-	if(status == HAL_OK){
-		status = HAL_UART_GetState(bms->errorLogger.huart1) == HAL_UART_STATE_READY ? HAL_OK : HAL_ERROR;
-	}
-	HAL_GPIO_WritePin(RS_DIR_GPIO_Port, RS_DIR_Pin, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(RE_DIR_GPIO_Port, RE_DIR_Pin, GPIO_PIN_RESET);
-
-	return status;
+	/* SCOPE-DEBUG: transmission is intentionally disabled to keep the
+	 * transceiver locked in RX mode while sniffing PC-generated frames.
+	 * The PC USB-RS485 adapter is the sole transmitter on the bus. */
+	(void)bms; (void)data; (void)size; (void)timeout;
+	return HAL_OK;
 }
 
 HAL_StatusTypeDef BMS_RS485_Receive(BMS_TypeDef* bms, uint8_t* data, uint16_t size, uint32_t timeout){
@@ -171,8 +161,8 @@ HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms){
 		return HAL_ERROR;
 	}
 
-	// Process JK-BMS Telemetry Polling and Data Extraction via flat sequential routine
-	(void)BMS_JK_Normal(&bms->bmsJK, 100U);
+	// Sniff JK-BMS RS485 bus (non-blocking; buffers bytes and decodes on gap)
+	(void)BMS_JK_ReceiveHandler(&bms->bmsJK);
 
 	return HAL_OK;
 }
