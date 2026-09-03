@@ -13,9 +13,10 @@
   *       time.sleep(0.05)
   *   time.sleep(5)
   *
- * RS485: DE toggles TX/RX; /RE stays enabled (RO always driven → clean UART on scope).
- * Muting /RE floats RO → capacitive spikes that look like a high-pass filter.
- * Local TX echo is drained while sending so it does not fill rxBuf / need a post-TX flush.
+ * RS485: DE (RS_DIR) high only while shifting TX; drop DE immediately after TC so the
+ * bus can return idle-high. /RE stays enabled (RO driven). Local TX echo is drained
+ * during TX. After turnaround, BMS_JK_POST_TX_DELAY_MS settle then 250 ms collect
+ * (F1 RX FIFO is 1 deep — settle still reads so the JK reply is not overrun).
  ******************************************************************************
  */
 
@@ -66,8 +67,15 @@ void BMS_JK_SET_TX(BMS_JK_HandleTypeDef *jk)
 void BMS_JK_SET_RX(BMS_JK_HandleTypeDef *jk)
 {
     (void)jk;
+    /* DE low first — release bus; idle must return HIGH (not stuck 0) */
     HAL_GPIO_WritePin(RS_DIR_GPIO_Port, RS_DIR_Pin, GPIO_PIN_RESET);
     HAL_GPIO_WritePin(RE_DIR_GPIO_Port, RE_DIR_Pin, GPIO_PIN_RESET);
+}
+
+static void BMS_JK_SampleDirPins(BMS_JK_HandleTypeDef *jk)
+{
+    jk->dePin = (HAL_GPIO_ReadPin(RS_DIR_GPIO_Port, RS_DIR_Pin) == GPIO_PIN_SET) ? 1U : 0U;
+    jk->rePin = (HAL_GPIO_ReadPin(RE_DIR_GPIO_Port, RE_DIR_Pin) == GPIO_PIN_SET) ? 1U : 0U;
 }
 
 static void BMS_JK_FlushRx(UART_HandleTypeDef *huart)
@@ -120,8 +128,7 @@ static HAL_StatusTypeDef BMS_JK_TransmitDropEcho(UART_HandleTypeDef *huart,
         }
     }
 
-    /* Any late echo byte */
-    BMS_JK_FlushRx(huart);
+    /* Do not flush here — caller drops DE first, then clears residual echo */
     return HAL_OK;
 }
 
@@ -167,58 +174,76 @@ HAL_StatusTypeDef BMS_JK_SendRequest(BMS_JK_HandleTypeDef *jk, uint8_t cmdIndex)
 
     if (BMS_JK_TransmitDropEcho(jk->huart, s_jkCmds[cmdIndex], BMS_JK_CMD_LEN) != HAL_OK) {
         BMS_JK_SET_RX(jk);
+        BMS_JK_SampleDirPins(jk);
         return HAL_ERROR;
     }
 
-    /* Drop DE; /RE already low. Echo already drained — do not flush JK reply. */
+    /* Drop DE immediately after TC so A/B / RO can return idle-high (not stuck 0). */
     BMS_JK_SET_RX(jk);
+    BMS_JK_SampleDirPins(jk);
+
+    /* Clear residual TX echo / DE-edge glitch only — do not eat the JK reply. */
+    BMS_JK_FlushRx(jk->huart);
 
     jk->txCount++;
     return HAL_OK;
 }
 
 /*
- * time.sleep(0.25) while collecting every RXNE byte.
- * Never skip storing on FE: FE+RXNE still has a byte in DR; discarding it
- * made ReceiveResponse always return HAL_BUSY.
+ * Post-TX settle (BMS_JK_POST_TX_DELAY_MS) then reply collect (BMS_JK_REPLY_WAIT_MS).
+ * Both phases read continuously — F1 RX FIFO depth is 1; blind delay after TX
+ * would overrun and lose SOF. FE/NE counted and discarded (often 0x00) so they
+ * cannot poison the leading edge of rxBuf / sofOk; clean bytes are stored.
  */
 HAL_StatusTypeDef BMS_JK_ReceiveResponse(BMS_JK_HandleTypeDef *jk)
 {
     uint16_t n = 0U;
+    uint16_t i;
     uint32_t t0;
+    uint32_t phase;
 
     if ((jk == NULL) || (jk->huart == NULL)) {
         return HAL_ERROR;
     }
 
     jk->rxLen = 0U;
+    memset(jk->rxHead, 0, sizeof(jk->rxHead));
     BMS_JK_SET_RX(jk);
+    BMS_JK_SampleDirPins(jk);
     SET_BIT(jk->huart->Instance->CR1, USART_CR1_RE);
 
-    t0 = HAL_GetTick();
-    while ((HAL_GetTick() - t0) < BMS_JK_REPLY_WAIT_MS) {
-        uint32_t sr = jk->huart->Instance->SR;
+    for (phase = 0U; phase < 2U; phase++) {
+        uint32_t phaseMs = (phase == 0U) ? BMS_JK_POST_TX_DELAY_MS : BMS_JK_REPLY_WAIT_MS;
+        t0 = HAL_GetTick();
+        while ((HAL_GetTick() - t0) < phaseMs) {
+            uint32_t sr = jk->huart->Instance->SR;
 
-        if ((sr & (USART_SR_RXNE | USART_SR_ORE)) != 0U) {
-            uint8_t b = (uint8_t)(jk->huart->Instance->DR & 0xFFU);
-            if ((sr & USART_SR_ORE) != 0U) {
-                jk->oreCount++;
-            }
-            if ((sr & (USART_SR_FE | USART_SR_NE)) != 0U) {
+            if ((sr & (USART_SR_RXNE | USART_SR_ORE)) != 0U) {
+                uint8_t b = (uint8_t)(jk->huart->Instance->DR & 0xFFU);
+                if ((sr & USART_SR_ORE) != 0U) {
+                    jk->oreCount++;
+                }
+                if ((sr & (USART_SR_FE | USART_SR_NE)) != 0U) {
+                    /* Clear error via DR read above; do not store garbage */
+                    jk->feCount++;
+                    continue;
+                }
+                if (n < BMS_JK_MAX_RX_BYTES) {
+                    jk->rxBuf[n++] = b;
+                }
+            } else if ((sr & (USART_SR_FE | USART_SR_NE)) != 0U) {
+                (void)jk->huart->Instance->DR;
                 jk->feCount++;
-                /* still store — otherwise n stays 0 and we never hit HAL_OK */
             }
-            if (n < BMS_JK_MAX_RX_BYTES) {
-                jk->rxBuf[n++] = b;
-            }
-        } else if ((sr & (USART_SR_FE | USART_SR_NE)) != 0U) {
-            (void)jk->huart->Instance->DR;
-            jk->feCount++;
         }
     }
 
     jk->rxLen = n;
     jk->lastRxLen = n;
+    for (i = 0U; (i < 16U) && (i < n); i++) {
+        jk->rxHead[i] = jk->rxBuf[i];
+    }
+
     if (n > 0U) {
         jk->rxCount++;
         return HAL_OK;
@@ -228,10 +253,26 @@ HAL_StatusTypeDef BMS_JK_ReceiveResponse(BMS_JK_HandleTypeDef *jk)
 
 /*
  * Real JK RX (from jk_rx_frames.log):
- *   4E 57 | LEN_HI LEN_LO | 00 00 00 00 | 03 00 01 | TAG [DATA...] | 68 | 00 00 | CRC
+ *   SOF | LEN_HI LEN_LO | 00 00 00 00 | 03 00 01 | TAG [DATA...] | 68 | 00 00 | CRC
+ * SOF = 4E57 (classic/Python) or 2C54 (alternate).
  * LEN = byte count from LEN field through CRC (total frame = 2 + LEN).
  * Short replies are single-parameter; CellVoltages is a longer 0x79 dump.
  */
+/** True if buf[0..1] is a recognized JK SOF (4E57 or 2C54). */
+static uint8_t BMS_JK_IsSof(const uint8_t *buf)
+{
+    if (buf == NULL) {
+        return 0U;
+    }
+    if ((buf[0] == 0x4EU) && (buf[1] == 0x57U)) {
+        return 1U; /* classic Python / jk_rx_frames.log */
+    }
+    if ((buf[0] == 0x2CU) && (buf[1] == 0x54U)) {
+        return 1U; /* alternate SOF */
+    }
+    return 0U;
+}
+
 __attribute__((noinline)) void BMS_JK_DecodeFrame(BMS_JK_HandleTypeDef *jk)
 {
     uint16_t i;
@@ -250,9 +291,9 @@ __attribute__((noinline)) void BMS_JK_DecodeFrame(BMS_JK_HandleTypeDef *jk)
         return;
     }
 
-    /* Find SOF 4E57 — confirmed on every successful log line; skip leading garbage */
+    /* Find SOF 4E57 or 2C54 — skip leading garbage */
     for (i = 0U; (i + 1U) < jk->rxLen; i++) {
-        if ((jk->rxBuf[i] == 0x4EU) && (jk->rxBuf[i + 1U] == 0x57U)) {
+        if (BMS_JK_IsSof(&jk->rxBuf[i]) != 0U) {
             if (i > 0U) {
                 uint16_t remain = (uint16_t)(jk->rxLen - i);
                 memmove(jk->rxBuf, &jk->rxBuf[i], remain);
@@ -262,7 +303,7 @@ __attribute__((noinline)) void BMS_JK_DecodeFrame(BMS_JK_HandleTypeDef *jk)
         }
     }
 
-    if ((jk->rxLen < 4U) || (jk->rxBuf[0] != 0x4EU) || (jk->rxBuf[1] != 0x57U)) {
+    if ((jk->rxLen < 4U) || (BMS_JK_IsSof(jk->rxBuf) == 0U)) {
         /* No SOF: do NOT wipe lastRxLen; clear rxLen so UpdateSnapshot skips */
         jk->rxLen = 0U;
         return;
@@ -276,6 +317,12 @@ __attribute__((noinline)) void BMS_JK_DecodeFrame(BMS_JK_HandleTypeDef *jk)
     }
 
     jk->sofOk = 1U;
+
+    /* Live Expressions: show aligned SOF, not pre-SOF noise */
+    memset(jk->rxHead, 0, sizeof(jk->rxHead));
+    for (i = 0U; (i < 16U) && (i < jk->rxLen); i++) {
+        jk->rxHead[i] = jk->rxBuf[i];
+    }
 }
 
 /* Match parse_parameter() / parse_cell_voltages() — scan payload after 03 00 01 header */
@@ -294,7 +341,8 @@ void BMS_JK_UpdateSnapshot(BMS_JK_HandleTypeDef *jk)
     if ((jk->sofOk == 0U) || (jk->rxLen < 12U)) {
         return;
     }
-    if ((jk->rxBuf[0] != 0x4EU) || (jk->rxBuf[1] != 0x57U)) {
+    /* Accept either SOF; still try Python-style tag scan (same layout assumed) */
+    if (BMS_JK_IsSof(jk->rxBuf) == 0U) {
         return;
     }
 
@@ -407,14 +455,14 @@ HAL_StatusTypeDef BMS_JK_Normal(BMS_JK_HandleTypeDef *jk)
         jk->pollIndex = 0U;
     }
 
-    /* write → sleep 0.25 (while polling) → parse */
+    /* write → post-TX settle (50 ms) → collect 250 ms → parse; gap 50 ms / 5 s */
     if (BMS_JK_SendRequest(jk, jk->pollIndex) != HAL_OK) {
         jk->lastPollTick = HAL_GetTick();
         jk->operationTick = BMS_JK_CMD_GAP_MS;
         return HAL_ERROR;
     }
 
-    /* Always decode/update after RX attempt (HAL_OK or not) */
+    /* ReceiveResponse: BMS_JK_POST_TX_DELAY_MS then BMS_JK_REPLY_WAIT_MS */
     (void)BMS_JK_ReceiveResponse(jk);
     BMS_JK_DecodeFrame(jk);
     BMS_JK_UpdateSnapshot(jk);

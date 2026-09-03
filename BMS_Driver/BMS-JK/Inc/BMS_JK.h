@@ -13,7 +13,8 @@ extern "C" {
 #define BMS_JK_CMD_COUNT        22U
 
 /* Same timings as bms_jk_sender_receiver.py */
-#define BMS_JK_REPLY_WAIT_MS    250U
+#define BMS_JK_POST_TX_DELAY_MS  50U  /* bus/DE settle after TX before RX window */
+#define BMS_JK_REPLY_WAIT_MS    250U  /* Python time.sleep(0.25) collect window */
 #define BMS_JK_CMD_GAP_MS        50U
 #define BMS_JK_CYCLE_GAP_MS    5000U
 
@@ -36,7 +37,7 @@ typedef struct {
     uint16_t rxLen;
     uint8_t  pollIndex;
     uint8_t  initialized;
-    uint8_t  sofOk;        /* 1 = rxBuf aligned on valid 4E57 frame */
+    uint8_t  sofOk;        /* 1 = rxBuf aligned on SOF 4E57 or 2C54 */
     uint32_t lastPollTick;
     uint32_t operationTick;
 
@@ -44,10 +45,13 @@ typedef struct {
     uint32_t txCount;
     uint32_t rxCount;
     uint16_t lastRxLen;
+    uint8_t  rxHead[16];   /* first bytes of last RX (no SOF breakpoint needed) */
     uint32_t feCount;      /* framing/noise clears during RX poll */
     uint32_t oreCount;     /* overrun seen during RX poll */
     uint32_t decodeCount;  /* BMS_JK_DecodeFrame invocations */
     uint32_t snapshotCount;/* BMS_JK_UpdateSnapshot invocations */
+    uint8_t  dePin;        /* RS_DIR level after turnaround (0 = RX) */
+    uint8_t  rePin;        /* RE_DIR level (0 = /RE enabled) */
 } BMS_JK_HandleTypeDef;
 
 HAL_StatusTypeDef BMS_JK_Init(BMS_JK_HandleTypeDef *jk, UART_HandleTypeDef *huart,
@@ -61,7 +65,7 @@ HAL_StatusTypeDef BMS_JK_SendRequest(BMS_JK_HandleTypeDef *jk, uint8_t cmdIndex)
 HAL_StatusTypeDef BMS_JK_ReceiveResponse(BMS_JK_HandleTypeDef *jk);
 
 /**
- * Align rxBuf on SOF 4E57 (observed on every real JK RX), validate length,
+ * Align rxBuf on SOF 4E57 (Python/classic JK) or 2C54, validate length,
  * set sofOk. Keeps lastRxLen even when SOF is missing (noinline for breakpoints).
  */
 void BMS_JK_DecodeFrame(BMS_JK_HandleTypeDef *jk);
@@ -73,7 +77,7 @@ void BMS_JK_UpdateSnapshot(BMS_JK_HandleTypeDef *jk);
 #define BMS_JK_DecodeReponse  BMS_JK_DecodeFrame
 
 /**
-  * One Python-paced cmd: send → poll-RX 250 ms → decode → update snapshot.
+  * One Python-paced cmd: send → post-TX settle → RX 250 ms → decode → snapshot.
   */
 HAL_StatusTypeDef BMS_JK_Normal(BMS_JK_HandleTypeDef *jk);
 
