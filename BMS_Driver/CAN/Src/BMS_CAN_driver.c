@@ -84,6 +84,9 @@ HAL_StatusTypeDef BMS_CAN_AddMessage(BMS_TypeDef* bms, uint32_t Id, uint8_t DLC,
 
 	// assigning correct return of data function to correct msg
 	switch(Id){
+		case BMS_ID1_ID:
+			msg.getData = BMS_CAN_Get_ID1_Data;
+			break;
 		case BMS_VOLTCURTEMP_ID:
 			msg.getData = BMS_CAN_Get_ADC_Data;
 			break;
@@ -132,6 +135,11 @@ HAL_StatusTypeDef BMS_CAN_AddMessage(BMS_TypeDef* bms, uint32_t Id, uint8_t DLC,
 
 HAL_StatusTypeDef BMS_CAN_AddPeripheralFrames(BMS_TypeDef* bms){
 
+	/* StdId=1 bring-up / heartbeat — sent every BMS_ID1_PERIOD via CAN_HandleScheduled */
+	if(BMS_CAN_AddMessage(bms, BMS_ID1_ID, BMS_ID1_DLC, BMS_ID1_PERIOD) != HAL_OK){
+		return HAL_ERROR;
+	}
+
 	// adding frames with voltage, temperature and current
 	if(BMS_CAN_AddMessage(bms, BMS_VOLTCURTEMP_ID, BMS_VOLTCURTEMP_DLC, BMS_VOLTCURTEMP_PERIOD) != HAL_OK){
 		return HAL_ERROR;
@@ -145,6 +153,17 @@ HAL_StatusTypeDef BMS_CAN_AddPeripheralFrames(BMS_TypeDef* bms){
 	}
 
 	return HAL_OK;
+}
+
+void BMS_CAN_Get_ID1_Data(uint8_t *data, void* context){
+	static uint8_t s_id1Counter = 0U;
+
+	(void)context;
+
+	/* Rolling counter so TX is visible on a bus analyzer; marker in byte 1 */
+	data[0] = s_id1Counter++;
+	data[1] = 0xA5U;
+	/* data[2..7] already zeroed by CAN_HandleScheduled before getData */
 }
 
 void BMS_CAN_Get_ADC_Data(uint8_t *data, void* context){
