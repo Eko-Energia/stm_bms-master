@@ -13,13 +13,13 @@ extern "C" {
 #define BMS_JK_CMD_COUNT        22U
 
 /*
- * Bring-up knobs (defaults match a working Python-style SOC poll):
- *   BMS_JK_BRINGUP_SOC_ONLY=1  → only cmd 0 (SOC); easier Live Expression sync
- *   BMS_JK_BRINGUP_SOC_ONLY=0  → cycle all 22 cmds like bms_jk_sender_receiver.py
+ * Poll mode:
+ *   BMS_JK_BRINGUP_SOC_ONLY=0  → cycle all 22 cmds like bms_jk_sender_receiver.py (default)
+ *   BMS_JK_BRINGUP_SOC_ONLY=1  → only cmd 0 (SOC); optional Live Expression bring-up
  * HSI-only clock — do not enable HSE.
  */
 #ifndef BMS_JK_BRINGUP_SOC_ONLY
-#define BMS_JK_BRINGUP_SOC_ONLY     1
+#define BMS_JK_BRINGUP_SOC_ONLY     0
 #endif
 
 /* Python: time.sleep(0.25) then read(in_waiting). Collect during this window. */

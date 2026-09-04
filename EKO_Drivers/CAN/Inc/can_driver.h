@@ -18,7 +18,7 @@
  */
 
 #define CAN_MAX_DLC (8)
-#define CAN_MAX_MSG (14)
+#define CAN_MAX_MSG (20)
 
 /**
  * Automatic retransmission (bxCAN NART bit), applied by CAN_Init().

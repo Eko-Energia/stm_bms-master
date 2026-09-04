@@ -81,6 +81,8 @@ HAL_StatusTypeDef BMS_CAN_AddMessage(BMS_TypeDef* bms, uint32_t Id, uint8_t DLC,
 	msg.header.DLC = DLC;
 	msg.periodMs = period;
 	msg.header.ExtId = 0;
+	msg.context = NULL;
+	msg.getData = NULL;
 
 	// assigning correct return of data function to correct msg
 	switch(Id){
@@ -117,6 +119,24 @@ HAL_StatusTypeDef BMS_CAN_AddMessage(BMS_TypeDef* bms, uint32_t Id, uint8_t DLC,
 		case BMS_THERM9_ID:
 			msg.getData = BMS_CAN_Get_CAN2_Data_Therm9;
 				break;
+		case BMS_JK_PACK_INFO_ID:
+			msg.getData = BMS_CAN_Get_JK_PackInfo;
+			break;
+		case BMS_JK_CELL_VOLT_1_4_ID:
+			msg.getData = BMS_CAN_Get_JK_CellVolt_1_4;
+			break;
+		case BMS_JK_CELL_VOLT_5_8_ID:
+			msg.getData = BMS_CAN_Get_JK_CellVolt_5_8;
+			break;
+		case BMS_JK_CELL_VOLT_9_12_ID:
+			msg.getData = BMS_CAN_Get_JK_CellVolt_9_12;
+			break;
+		case BMS_JK_TEMP_ID:
+			msg.getData = BMS_CAN_Get_JK_Temp;
+			break;
+		case BMS_JK_CYCLE_STATS_ID:
+			msg.getData = BMS_CAN_Get_JK_CycleStats;
+			break;
 		default:
 
 			// return error status in case wrong Id has been given
@@ -150,6 +170,26 @@ HAL_StatusTypeDef BMS_CAN_AddPeripheralFrames(BMS_TypeDef* bms){
 		if(BMS_CAN_AddMessage(bms, (BMS_THERM1_ID + i), BMS_THERMx_DLC, BMS_THERMx_PERIOD) != HAL_OK){
 			return HAL_ERROR;
 		}
+	}
+
+	/* JK snapshot export — refreshed from bms.bmsJK.snapshot by getData callbacks */
+	if(BMS_CAN_AddMessage(bms, BMS_JK_PACK_INFO_ID, BMS_JK_PACK_INFO_DLC, BMS_JK_CAN_PERIOD) != HAL_OK){
+		return HAL_ERROR;
+	}
+	if(BMS_CAN_AddMessage(bms, BMS_JK_CELL_VOLT_1_4_ID, BMS_JK_CELL_VOLT_DLC, BMS_JK_CAN_PERIOD) != HAL_OK){
+		return HAL_ERROR;
+	}
+	if(BMS_CAN_AddMessage(bms, BMS_JK_CELL_VOLT_5_8_ID, BMS_JK_CELL_VOLT_DLC, BMS_JK_CAN_PERIOD) != HAL_OK){
+		return HAL_ERROR;
+	}
+	if(BMS_CAN_AddMessage(bms, BMS_JK_CELL_VOLT_9_12_ID, BMS_JK_CELL_VOLT_DLC, BMS_JK_CAN_PERIOD) != HAL_OK){
+		return HAL_ERROR;
+	}
+	if(BMS_CAN_AddMessage(bms, BMS_JK_TEMP_ID, BMS_JK_TEMP_DLC, BMS_JK_CAN_PERIOD) != HAL_OK){
+		return HAL_ERROR;
+	}
+	if(BMS_CAN_AddMessage(bms, BMS_JK_CYCLE_STATS_ID, BMS_JK_CYCLE_STATS_DLC, BMS_JK_CAN_PERIOD) != HAL_OK){
+		return HAL_ERROR;
 	}
 
 	return HAL_OK;
@@ -197,6 +237,80 @@ void BMS_CAN_Get_CAN2_Data_Therm6(uint8_t *data, void* context){ BMS_CAN_PackCAN
 void BMS_CAN_Get_CAN2_Data_Therm7(uint8_t *data, void* context){ BMS_CAN_PackCAN2Temps(data, 6);}
 void BMS_CAN_Get_CAN2_Data_Therm8(uint8_t *data, void* context){ BMS_CAN_PackCAN2Temps(data, 7);}
 void BMS_CAN_Get_CAN2_Data_Therm9(uint8_t *data, void* context){ BMS_CAN_PackCAN2Temps(data, 8);}
+
+/** Pack 4 consecutive cell mV values starting at cellBase (0-based) into data[0..7] LE. */
+static void BMS_CAN_PackJK_CellBlock(uint8_t *data, uint8_t cellBase)
+{
+	uint8_t i;
+	for (i = 0U; i < 4U; i++) {
+		uint16_t mV = bms.bmsJK.snapshot.cellVoltageMV[cellBase + i];
+		data[(i * 2U)]     = BMS_CAN_GetLSB(mV);
+		data[(i * 2U) + 1U] = BMS_CAN_GetMSB(mV);
+	}
+}
+
+void BMS_CAN_Get_JK_PackInfo(uint8_t *data, void *context)
+{
+	/* Docs 0x140: PackVoltage/Current factor 0.01 → raw = mV/10, mA/10; Intel LE */
+	uint16_t voltRaw;
+	int16_t  currRaw;
+	int32_t  mv = bms.bmsJK.snapshot.packVoltageMV;
+	int32_t  ma = bms.bmsJK.snapshot.packCurrentMA;
+
+	(void)context;
+
+	if (mv < 0) {
+		mv = 0;
+	}
+	voltRaw = (uint16_t)(mv / 10);
+	currRaw = (int16_t)(ma / 10);
+
+	data[0] = BMS_CAN_GetLSB(voltRaw);
+	data[1] = BMS_CAN_GetMSB(voltRaw);
+	data[2] = BMS_CAN_GetLSB((uint16_t)currRaw);
+	data[3] = BMS_CAN_GetMSB((uint16_t)currRaw);
+	data[4] = bms.bmsJK.snapshot.soc;
+	data[5] = 0U; /* SOH not in snapshot yet */
+	data[6] = (bms.bmsJK.initialized != 0U) ? 0U : (1U << 6); /* bit6: comm error if never decoded */
+	data[7] = 0U; /* ModeFlags */
+}
+
+void BMS_CAN_Get_JK_CellVolt_1_4(uint8_t *data, void *context)
+{
+	(void)context;
+	BMS_CAN_PackJK_CellBlock(data, 0U);
+}
+
+void BMS_CAN_Get_JK_CellVolt_5_8(uint8_t *data, void *context)
+{
+	(void)context;
+	BMS_CAN_PackJK_CellBlock(data, 4U);
+}
+
+void BMS_CAN_Get_JK_CellVolt_9_12(uint8_t *data, void *context)
+{
+	(void)context;
+	BMS_CAN_PackJK_CellBlock(data, 8U);
+}
+
+void BMS_CAN_Get_JK_Temp(uint8_t *data, void *context)
+{
+	(void)context;
+	/* int8 °C (snapshot already in °C); bytes 2..7 reserved */
+	data[0] = (uint8_t)(int8_t)bms.bmsJK.snapshot.mosTemperatureC;
+	data[1] = (uint8_t)(int8_t)bms.bmsJK.snapshot.balTemperatureC;
+}
+
+void BMS_CAN_Get_JK_CycleStats(uint8_t *data, void *context)
+{
+	uint16_t cycles = (uint16_t)bms.bmsJK.snapshot.cycles;
+
+	(void)context;
+	data[0] = BMS_CAN_GetLSB(cycles);
+	data[1] = BMS_CAN_GetMSB(cycles);
+	data[2] = bms.bmsJK.snapshot.cellCount;
+	/* data[3..7] reserved / capacity not yet parsed */
+}
 
 
 uint8_t BMS_CAN_GetMSB(uint16_t value){

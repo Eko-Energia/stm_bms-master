@@ -68,6 +68,10 @@ extern "C" {
 #define BMS_ID1_DLC			    (8)														/*< DLC of StdId=1 bring-up / heartbeat frame>*/
 #define BMS_VOLTCURTEMP_DLC     (6)														/*< DLC of voltage/current/temperature frame>*/
 #define BMS_THERMx_DLC		    (7)														/*< DLC of thermistor group frames>*/
+#define BMS_JK_PACK_INFO_DLC    (8)														/*< DLC of JK pack info (0x140)>*/
+#define BMS_JK_CELL_VOLT_DLC    (8)														/*< DLC of JK cell voltage block (4x u16)>*/
+#define BMS_JK_TEMP_DLC         (8)														/*< DLC of JK MOS/bal temperature frame>*/
+#define BMS_JK_CYCLE_STATS_DLC  (8)														/*< DLC of JK cycle stats frame>*/
 
 /*
 	 ==============================================================================
@@ -80,6 +84,7 @@ extern "C" {
 #define BMS_ID1_PERIOD		    (100)													/*< Period of StdId=1 bring-up / heartbeat frame>*/
 #define BMS_VOLTCURTEMP_PERIOD  (500)													/*< Period of voltage/current/temperature frame>*/
 #define BMS_THERMx_PERIOD		(1000)													/*< Period of thermistor group frames>*/
+#define BMS_JK_CAN_PERIOD       (1000)													/*< Period of JK telemetry export frames (docs/BMS-JK.md)>*/
 
 /*
 	 ==============================================================================
@@ -101,6 +106,14 @@ extern "C" {
 #define BMS_THERM7_ID			(137)													/*< Thermistor group 7 frame ID>*/
 #define BMS_THERM8_ID			(138)													/*< Thermistor group 8 frame ID>*/
 #define BMS_THERM9_ID			(139)													/*< Thermistor group 9 frame ID>*/
+
+/* JK BMS telemetry export (docs/BMS-JK.md) — separate from ADC/therm IDs */
+#define BMS_JK_PACK_INFO_ID     (0x140U)												/*< Pack V/I/SOC/SOH/status/mode>*/
+#define BMS_JK_CELL_VOLT_1_4_ID (0x141U)												/*< Cells 1..4 voltages [mV]>*/
+#define BMS_JK_CELL_VOLT_5_8_ID (0x142U)												/*< Cells 5..8 voltages [mV]>*/
+#define BMS_JK_CELL_VOLT_9_12_ID (0x143U)												/*< Cells 9..12 voltages [mV]>*/
+#define BMS_JK_TEMP_ID          (0x144U)												/*< MOS / bal temperature [°C]>*/
+#define BMS_JK_CYCLE_STATS_ID   (0x148U)												/*< Cycle count + cellCount>*/
 
 /*
 	 ==============================================================================
@@ -251,6 +264,36 @@ void 			  BMS_CAN_Get_CAN2_Data_Therm8(uint8_t *data, void* context);
   * @retval None
   */
 void 			  BMS_CAN_Get_CAN2_Data_Therm9(uint8_t *data, void* context);
+
+/*
+  * @brief  Packs JK snapshot pack voltage/current/SOC into CAN TX payload (0x140)
+  */
+void 			  BMS_CAN_Get_JK_PackInfo(uint8_t *data, void *context);
+
+/*
+  * @brief  Packs JK cell voltages 1..4 [mV] little-endian (0x141)
+  */
+void 			  BMS_CAN_Get_JK_CellVolt_1_4(uint8_t *data, void *context);
+
+/*
+  * @brief  Packs JK cell voltages 5..8 [mV] little-endian (0x142)
+  */
+void 			  BMS_CAN_Get_JK_CellVolt_5_8(uint8_t *data, void *context);
+
+/*
+  * @brief  Packs JK cell voltages 9..12 [mV] little-endian (0x143)
+  */
+void 			  BMS_CAN_Get_JK_CellVolt_9_12(uint8_t *data, void *context);
+
+/*
+  * @brief  Packs JK MOS/bal temperatures [°C] (0x144)
+  */
+void 			  BMS_CAN_Get_JK_Temp(uint8_t *data, void *context);
+
+/*
+  * @brief  Packs JK cycle count and cellCount (0x148)
+  */
+void 			  BMS_CAN_Get_JK_CycleStats(uint8_t *data, void *context);
 
 /*
 	 ==============================================================================
