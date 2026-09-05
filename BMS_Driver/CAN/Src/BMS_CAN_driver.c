@@ -119,22 +119,22 @@ HAL_StatusTypeDef BMS_CAN_AddMessage(BMS_TypeDef* bms, uint32_t Id, uint8_t DLC,
 		case BMS_THERM9_ID:
 			msg.getData = BMS_CAN_Get_CAN2_Data_Therm9;
 				break;
-		case BMS_JK_PACK_INFO_ID:
+		case BMSMaster_JK_PACK_INFO_ID:
 			msg.getData = BMS_CAN_Get_JK_PackInfo;
 			break;
-		case BMS_JK_CELL_VOLT_1_4_ID:
+		case BMSMaster_JK_CELL_VOLT_1_4_ID:
 			msg.getData = BMS_CAN_Get_JK_CellVolt_1_4;
 			break;
-		case BMS_JK_CELL_VOLT_5_8_ID:
+		case BMSMaster_JK_CELL_VOLT_5_8_ID:
 			msg.getData = BMS_CAN_Get_JK_CellVolt_5_8;
 			break;
-		case BMS_JK_CELL_VOLT_9_12_ID:
+		case BMSMaster_JK_CELL_VOLT_9_12_ID:
 			msg.getData = BMS_CAN_Get_JK_CellVolt_9_12;
 			break;
-		case BMS_JK_TEMP_ID:
+		case BMSMaster_JK_TEMP_ID:
 			msg.getData = BMS_CAN_Get_JK_Temp;
 			break;
-		case BMS_JK_CYCLE_STATS_ID:
+		case BMSMaster_JK_CYCLE_STATS_ID:
 			msg.getData = BMS_CAN_Get_JK_CycleStats;
 			break;
 		default:
