@@ -38,8 +38,8 @@ void MX_TIM3_Init(void)
   TIM_OC_InitTypeDef sConfigOC = {0};
 
   /* USER CODE BEGIN TIM3_Init 1 */
-  /* Target: 1 kHz relay PWM. With TIMCLK≈72 MHz: f = 72e6 / (PSC+1) / (ARR+1).
-   * Cube sets Prescaler/Period below — keep 71 / 999 for 1 kHz. */
+  /* Relay PWM: SYSCLK=36 MHz (HSI/PLL), APB1/1 → TIMCLK=36 MHz.
+   * f = 36e6 / (PSC+1) / (ARR+1) = 36e6 / 72 / 1000 ≈ 500 Hz with PSC=71/ARR=999. */
   /* USER CODE END TIM3_Init 1 */
   htim3.Instance = TIM3;
   htim3.Init.Prescaler = 71;
@@ -70,13 +70,28 @@ void MX_TIM3_Init(void)
    * RELAY_CTRL (PB0 / TIM3_CH3) must be PWM1, not OC Timing.
    * Cube may generate Output Compare / TIM_OCMODE_TIMING — override here so
    * regenerate does not leave the relay pin without PWM output.
-   * PSC=71, ARR=999 @ ~72 MHz timer clock → 1 kHz PWM (matches RELAY_*_FREQ).
+   *
+   * Clock: HSI → PLL → SYSCLK 36 MHz, APB1 /1 → TIMCLK = 36 MHz.
+   *   f_PWM = 36e6 / (PSC+1) / (ARR+1) = 36e6 / 72 / 1000  =>  ~500 Hz.
+   *
+   * Pulse = ARR (999) so the very first PWM cycle is ~100 % HIGH even before
+   * PWM_Out_setDuty runs. Prevents "PB0 stuck at 0 V" if BMS_PWM_Init never
+   * executes (e.g. earlier BMS_Init failure).
    */
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 0;
+  sConfigOC.Pulse = 999;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /*
+   * Start PWM directly here so the pin is driven before BMS_Init runs.
+   * Duty is later overwritten by PWM_Out_setDuty in the BMS state machine.
+   */
+  if (HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3) != HAL_OK)
   {
     Error_Handler();
   }

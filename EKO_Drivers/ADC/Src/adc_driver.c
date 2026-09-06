@@ -148,7 +148,7 @@ static HAL_StatusTypeDef ADC_ReadChannel_NoDMA_Independent(ADC_HandleTypeDef* ha
 static HAL_StatusTypeDef ADC_ReadChannel_NoDMA_Independent_SingleConversion(ADC_HandleTypeDef* hadc, uint16_t* retval){
 
 	// initializing temporary variable to store read value before checking if it's correct
-	uint16_t tempValue = 0;
+	int tempValue = 0;
 
 	// starting ADC
 	if(HAL_ADC_Start(hadc) != HAL_OK){
@@ -196,58 +196,57 @@ static HAL_StatusTypeDef ADC_ReadChannel_NoDMA_Independent_SingleConversion(ADC_
  */
 static HAL_StatusTypeDef ADC_Averaging(ADC_HandleTypeDef* hadc, ADC_ChannelsConfigTypeDefs* cadc, ADC_BufferTypeDef* badc, uint8_t rank, uint16_t* retval){
 
-	// security check if user correctly configured buffer size
-	if(ADC1_BUFFER_SIZE < 1 || ADC2_BUFFER_SIZE < 1){
+	const uint16_t *buf;
+	uint16_t bufSize;
+	uint16_t samples;
+	uint8_t nch;
+	uint32_t sum = 0U;
+	uint16_t snap[ADC1_SAMPLING];
+
+	if(NULL == hadc || NULL == cadc || NULL == badc || NULL == retval){
 		return HAL_ERROR;
 	}
 
-
-	// init of variable to store sum of measures from one channel
-	uint32_t value = 0;
-
-	// variable stores number of samples
-	uint8_t samples = 0;
+	nch = cadc->numberOfSelectedChannels;
+	if(0U == nch || rank >= nch){
+		return HAL_ERROR;
+	}
 
 	if(hadc->Instance == ADC1){
-
-		// reading ADC1 buffer amount of samples for one channel
-		samples = ADC1_SAMPLING;
-
-
+		samples = (uint16_t)ADC1_SAMPLING;
+		buf = badc->adc1Values;
+		bufSize = (uint16_t)ADC1_BUFFER_SIZE;
 	}else if(hadc->Instance == ADC2){
-
-		// reading ADC2 buffer amount of samples for one channel
-		samples = ADC2_SAMPLING;
-
+		samples = (uint16_t)ADC2_SAMPLING;
+		buf = badc->adc2Values;
+		bufSize = (uint16_t)ADC2_BUFFER_SIZE;
 	}else{
-
-		// returning error state when incorrect handle was given
 		return HAL_ERROR;
 	}
 
-
-
-	// summing measures for one channel
-	/*
-	 * @note i increments up to samples, because it defines amount of iterations, for loops need to do to access all samples despite of channel's rank
-	 */
-	for(uint8_t i = 0; i < samples; ++i){
-		value += (hadc->Instance == ADC1) ? badc->adc1Values[(uint8_t)((i * cadc->numberOfSelectedChannels) + rank)] : badc->adc2Values[i * cadc->numberOfSelectedChannels + rank];
+	if(samples < 1U || samples > ADC1_SAMPLING || ((uint32_t)samples * nch) > bufSize){
+		return HAL_ERROR;
 	}
 
-	// calculating averaged value
-	value /= samples;
+	/*
+	 * Freeze one interleaved frame-set so circular DMA cannot mix old/new
+	 * ranks mid-sum (that showed up as ~100 mV jumps on pack voltage).
+	 */
+	__disable_irq();
+	for(uint16_t i = 0U; i < samples; ++i){
+		snap[i] = buf[(uint16_t)((uint32_t)i * nch + rank)];
+	}
+	__enable_irq();
 
-	// security check, if calculated values in well averaged
-	if(value <= ADC_Resolution(hadc)){
+	for(uint16_t i = 0U; i < samples; ++i){
+		sum += snap[i];
+	}
+	sum /= samples;
 
-		// assigning calculated value to function's output
-		*retval = value;
-
-		// returning OK status
+	if(sum <= ADC_Resolution(hadc)){
+		*retval = (uint16_t)sum;
 		return HAL_OK;
 	}
-
 
 	return HAL_ERROR;
 }

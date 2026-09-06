@@ -19,8 +19,6 @@
 #ifndef INC_BMS_H_
 #define INC_BMS_H_
 
-#pragma once
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -46,14 +44,13 @@ extern uint32_t lastTick;																/*< Last SysTick value used by BMS_Mode
 /*
   * @brief  Initializes BMS object, assigns peripheral handles and starts CAN/ADC/PWM/EH
   * @param  bms    Pointer to BMS handle
-  * @param  bhcan1 Pointer to CAN1 HAL handle (TX / error reporting)
-  * @param  bhcan2 Pointer to CAN2 HAL handle (cell temperatures RX)
+  * @param  bhcan1 Pointer to CAN1 HAL handle (TX scheduled + RX thermistor frames)
   * @param  hadc   Pointer to ADC HAL handle
   * @param  huart  Pointer to UART HAL handle (logger)
   * @param  htim   Pointer to TIM HAL handle (PWM)
   * @retval HAL_OK on success, HAL_ERROR on failure
   */
-HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_HandleTypeDef* bhcan2, ADC_HandleTypeDef* hadc, UART_HandleTypeDef* huart, TIM_HandleTypeDef* htim);
+HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, ADC_HandleTypeDef* hadc, UART_HandleTypeDef* huart, TIM_HandleTypeDef* htim);
 
 /*
 	 ==============================================================================
@@ -91,14 +88,6 @@ HAL_StatusTypeDef BMS_Mode_Change(BMS_TypeDef* bms, BMS_StatusTypeDef_e status);
 HAL_StatusTypeDef BMS_Log_Data(BMS_TypeDef* bms);
 
 /*
-  * @brief  Changes BMS status (legacy / alternate status switch API)
-  * @param  bms    Pointer to BMS handle
-  * @param  status New BMS status to apply
-  * @retval HAL_OK on success, HAL_ERROR on failure
-  */
-HAL_StatusTypeDef BMS_Status_Change(BMS_TypeDef* bms,BMS_StatusTypeDef_e status);
-
-/*
   * @brief  Blinks status LEDs according to current BMS mode
   * @param  bms Pointer to BMS handle
   * @retval None
@@ -124,6 +113,9 @@ HAL_StatusTypeDef BMS_Start_Peripherals(BMS_TypeDef* bms);
   * @retval HAL_OK on success, HAL_ERROR on failure
   */
 HAL_StatusTypeDef BMS_Stop_Peripherals(BMS_TypeDef* bms);
+
+/* RS485 DIR pins idle (RX). JK TX/RX is handled by BMS_JK_*. */
+void BMS_RS485_Init(BMS_TypeDef* bms);
 
 /*
 	 ==============================================================================

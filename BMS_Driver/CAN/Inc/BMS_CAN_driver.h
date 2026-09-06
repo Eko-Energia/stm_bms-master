@@ -42,7 +42,7 @@ extern "C" {
 #define VOLTAGE_OFFSET          (0.0f)													/*< Voltage scaling offset>*/
 #define VOLTAGE_GAIN 		    (0.1f)													/*< Voltage scaling gain>*/
 
-#define CURRENT_OFFSET          (300.0f)												/*< Current scaling offset>*/
+#define CURRENT_OFFSET          (0.0f)												/*< Current scaling offset>*/
 #define CURRENT_GAIN 		    (0.1f)													/*< Current scaling gain>*/
 
 #define TEMPERATURE_OFFSET      (0.0f)													/*< Temperature scaling offset>*/
@@ -65,8 +65,13 @@ extern "C" {
 
 /* CAN Frames DLCs */
 #define BMS_NODE_DLC		    (8)														/*< DLC of BMS node identification frame>*/
+#define BMS_ID1_DLC			    (8)														/*< DLC of StdId=1 bring-up / heartbeat frame>*/
 #define BMS_VOLTCURTEMP_DLC     (6)														/*< DLC of voltage/current/temperature frame>*/
 #define BMS_THERMx_DLC		    (7)														/*< DLC of thermistor group frames>*/
+#define BMSMaster_JK_PACK_INFO_DLC    (8)												/*< DLC of JK pack info (StdId 140)>*/
+#define BMSMaster_JK_CELL_VOLT_DLC    (8)												/*< DLC of JK cell voltage block (4x u16)>*/
+#define BMSMaster_JK_TEMP_DLC         (8)												/*< DLC of JK MOS/bal temperature frame>*/
+#define BMSMaster_JK_CYCLE_STATS_DLC  (8)												/*< DLC of JK cycle stats frame>*/
 
 /*
 	 ==============================================================================
@@ -76,8 +81,10 @@ extern "C" {
 
 /* CAN Frames Periods [ms] */
 #define BMS_NODE_PERIOD		    (5000)													/*< Period of BMS node frame>*/
+#define BMS_ID1_PERIOD		    (100)													/*< Period of StdId=1 bring-up / heartbeat frame>*/
 #define BMS_VOLTCURTEMP_PERIOD  (500)													/*< Period of voltage/current/temperature frame>*/
 #define BMS_THERMx_PERIOD		(1000)													/*< Period of thermistor group frames>*/
+#define BMSMaster_JK_CAN_PERIOD       (1000)											/*< Period of JK telemetry export frames [ms]>*/
 
 /*
 	 ==============================================================================
@@ -86,6 +93,8 @@ extern "C" {
 */
 
 /* CAN Frames IDs */
+#define BMS_ID1_ID		        (1)														/*< StdId=1 bring-up / heartbeat TX frame ID>*/
+#define SAFE_STATE_ID			(BMS_ID1_ID)											/*< Safe-state RX status frame ID (same StdId as bring-up TX)>*/
 #define BMS_NODE_ID		        (128)													/*< BMS node identification frame ID>*/
 #define BMS_VOLTCURTEMP_ID      (130)													/*< Voltage/current/temperature frame ID>*/
 #define BMS_THERM1_ID		    (131)													/*< Thermistor group 1 frame ID>*/
@@ -97,7 +106,14 @@ extern "C" {
 #define BMS_THERM7_ID			(137)													/*< Thermistor group 7 frame ID>*/
 #define BMS_THERM8_ID			(138)													/*< Thermistor group 8 frame ID>*/
 #define BMS_THERM9_ID			(139)													/*< Thermistor group 9 frame ID>*/
-#define SAFE_STATE_ID			(1)														/*< Safe-state status frame ID>*/
+
+/* JK BMS telemetry export — StdId decimal 140..145 (user range 140..158) */
+#define BMSMaster_JK_PACK_INFO_ID     (140U)											/*< Pack V/I/SOC/SOH/status/mode>*/
+#define BMSMaster_JK_CELL_VOLT_1_4_ID (141U)											/*< Cells 1..4 voltages [mV]>*/
+#define BMSMaster_JK_CELL_VOLT_5_8_ID (142U)											/*< Cells 5..8 voltages [mV]>*/
+#define BMSMaster_JK_CELL_VOLT_9_12_ID (143U)											/*< Cells 9..12 voltages [mV]>*/
+#define BMSMaster_JK_TEMP_ID          (144U)											/*< MOS / bal temperature [°C]>*/
+#define BMSMaster_JK_CYCLE_STATS_ID   (145U)											/*< Cycle count + cellCount>*/
 
 /*
 	 ==============================================================================
@@ -109,8 +125,10 @@ extern "C" {
 #define BMS_THERM_PER_PCB       (9)														/*< Thermistors per slave PCB>*/
 #define BMS_THERM_TOTAL         (40)													/*< Full unique therm set for FAN max latch>*/
 #define BMS_THERM_ID_BASE       (200)													/*< CAN2 therm ID = BASE + pcb*10 + therm>*/
-#define BMS_CAN2_THERM_FILTER_ID   (0x200U)												/*< CAN2 HW filter ID base for therm range>*/
-#define BMS_CAN2_THERM_FILTER_MASK (0x780U)												/*< Mask: accept StdId 0x200..0x27F>*/
+#define BMS_CAN2_THERM_FILTER_ID_LO    (0x0C0U)											/*< HW bank 15 ID: 0x0C0..0x0FF covers decimal 211..255>*/
+#define BMS_CAN2_THERM_FILTER_MASK_LO  (0x7C0U)											/*< Mask for bank 15 (bits 10:6)>*/
+#define BMS_CAN2_THERM_FILTER_ID_HI    (0x100U)											/*< HW bank 16 ID: 0x100..0x11F covers decimal 256..279>*/
+#define BMS_CAN2_THERM_FILTER_MASK_HI  (0x7E0U)											/*< Mask for bank 16 (bits 10:5); 280..287 dropped in SW>*/
 
 
 /* Functions' prototypes ------------------------------------------------------------------  */
@@ -150,6 +168,14 @@ HAL_StatusTypeDef BMS_CAN_AddPeripheralFrames(BMS_TypeDef* bms);
 						   ##### CAN TX PAYLOAD PACKERS #####
 	 ==============================================================================
 */
+
+/*
+  * @brief  Packs StdId=1 bring-up / heartbeat TX payload (rolling counter)
+  * @param  data    Output payload buffer
+  * @param  context Pointer to BMS context (unused)
+  * @retval None
+  */
+void 			  BMS_CAN_Get_ID1_Data(uint8_t *data, void *context);
 
 /*
   * @brief  Packs ADC voltage/current/temperature into CAN TX payload
@@ -240,6 +266,36 @@ void 			  BMS_CAN_Get_CAN2_Data_Therm8(uint8_t *data, void* context);
 void 			  BMS_CAN_Get_CAN2_Data_Therm9(uint8_t *data, void* context);
 
 /*
+  * @brief  Packs JK snapshot pack voltage/current/SOC into CAN TX payload (StdId 140)
+  */
+void 			  BMS_CAN_Get_JK_PackInfo(uint8_t *data, void *context);
+
+/*
+  * @brief  Packs JK cell voltages 1..4 [mV] little-endian (StdId 141)
+  */
+void 			  BMS_CAN_Get_JK_CellVolt_1_4(uint8_t *data, void *context);
+
+/*
+  * @brief  Packs JK cell voltages 5..8 [mV] little-endian (StdId 142)
+  */
+void 			  BMS_CAN_Get_JK_CellVolt_5_8(uint8_t *data, void *context);
+
+/*
+  * @brief  Packs JK cell voltages 9..12 [mV] little-endian (StdId 143)
+  */
+void 			  BMS_CAN_Get_JK_CellVolt_9_12(uint8_t *data, void *context);
+
+/*
+  * @brief  Packs JK MOS/bal temperatures [°C] (StdId 144)
+  */
+void 			  BMS_CAN_Get_JK_Temp(uint8_t *data, void *context);
+
+/*
+  * @brief  Packs JK cycle count and cellCount (StdId 145)
+  */
+void 			  BMS_CAN_Get_JK_CycleStats(uint8_t *data, void *context);
+
+/*
 	 ==============================================================================
 						   ##### CAN HELPERS / RX #####
 	 ==============================================================================
@@ -266,7 +322,7 @@ uint8_t 		  BMS_CAN_GetLSB(uint16_t value);
   * @param  value_f Pointer to engineering-unit value to scale
   * @retval HAL_OK on success, HAL_ERROR on failure
   */
-HAL_StatusTypeDef BMS_CAN_ScallingParams(BMS_TypeDef* bms, uint8_t channel, float* value_f);
+HAL_StatusTypeDef BMS_CAN_ScallingParams(BMS_TypeDef* bms, uint8_t channel, float value_f);
 
 /*
   * @brief  Handles received CAN2 frames (temps / safe-state) and updates BMS state

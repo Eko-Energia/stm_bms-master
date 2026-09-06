@@ -1,28 +1,15 @@
-/**
-  ******************************************************************************
-  * @file      BMS.c
-  * @author    Bartosz Rychlicki
-  * @Title     C source files of all functions' bodies required for implementation for BMS Master's PCB board
-  * @brief     Functions contain logical implementation of BMS workflow.
-  *
-  ******************************************************************************
-  * @attention Error codes are called when exact incorrect use of function is made
-  *
-  * Copyright (c) 2026 AGH Eko-Energy.
-  * All rights reserved.
-  *
-  ******************************************************************************
-  */
-
 /* Includes ----------------------------------------------------------------------------------  */
 #include "BMS.h"
 #include "BMS_ADC_driver.h"
 #include "BMS_CAN_driver.h"
 #include "BMS_PWM.h"
+#include "usart.h"
+#include "BMS_JK.h"
 
 /* Variables ---------------------------------------------------------------------------------  */
 extern uint32_t lastTick;
 extern uint32_t pwmStartupStart;
+static uint32_t s_ledLastTick;			/*< Last tick when status LED was toggled (module-private) >*/
 
 /* Functions' bodies -------------------------------------------------------------------------  */
 
@@ -32,12 +19,14 @@ extern uint32_t pwmStartupStart;
 	 ==============================================================================
 */
 
-HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_HandleTypeDef* bhcan2, ADC_HandleTypeDef* hadc, UART_HandleTypeDef* huart, TIM_HandleTypeDef* htim){
+HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, ADC_HandleTypeDef* hadc, UART_HandleTypeDef* huart, TIM_HandleTypeDef* htim){
+
+	// reading current tick for LEDs blinking
+	s_ledLastTick = HAL_GetTick();
 
 	// assigning handle objects
 	bms->bmsADC.hadc        = hadc;
 	bms->bmsCAN.bhcan1      = bhcan1;
-	bms->bmsCAN.bhcan2      = bhcan2;
 	bms->errorLogger.huart1 = huart;
 	bms->bpwm.htim.htim 	= htim;
 
@@ -46,12 +35,40 @@ HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_Han
 	bms->prevStatus = BMS_NORMAL;
 
 	// Reset ADC scaled TX buffer (voltage / temperature / current)
-	memset(bms->bmsADC.ADC_voltTempCurr, 0 , sizeof(bms->bmsADC.ADC_voltTempCurr));
+	for(uint8_t i = 0U; i < 3U; ++i){
+		bms->bmsADC.ADC_voltTempCurr[i] = 0;
+	}
 
-	/* Clear full CAN2 thermistor matrix [7 PCBs][9 therms] — sizeof whole array, not one byte/row */
+	/* Clear thermistor matrix [7 PCBs][9 therms] */
 	memset(bms->bmsCAN.CAN2_temperatureCells, 0, sizeof(bms->bmsCAN.CAN2_temperatureCells));
 
-	// Launching CAN1 and CAN2
+	/* Zero CAN1 scheduled TX list */
+	memset(&bms->bmsCAN.CAN1_Buff, 0, sizeof(bms->bmsCAN.CAN1_Buff));
+
+	/*
+	 * JK RS485 MUST be initialized before PWM/CAN/ADC.
+	 * If a later peripheral fails, main still enters BMS_Error — JK poll
+	 * must already have a valid huart or TransmitRequest is a no-op.
+	 * UART handle from main is USART1 (huart1).
+	 */
+	BMS_RS485_Init(bms);
+	if(huart != NULL){
+		(void)BMS_JK_Init(&bms->bmsJK, huart, RS_DIR_GPIO_Port, RS_DIR_Pin,
+		                  RE_DIR_GPIO_Port, RE_DIR_Pin);
+	}
+
+	/*
+	 * PWM MUST be brought up before any other peripheral.
+	 */
+	if(BMS_PWM_Init(bms, htim) != HAL_OK){
+		return HAL_ERROR;
+	}
+	if(BMS_PWM_ChandeMode(bms, PWM_Startup) != HAL_OK){
+		return HAL_ERROR;
+	}
+	pwmStartupStart = HAL_GetTick();
+
+	// Launching CAN1 (TX scheduled + RX thermistor frames)
 	if(BMS_CAN_Init(bms) != HAL_OK){
 		return HAL_ERROR;
 	}
@@ -61,21 +78,13 @@ HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_Han
 		return HAL_ERROR;
 	}
 
-	// Initialization of TIM (PWM)
-	if(BMS_PWM_Init(bms, htim) != HAL_OK){
-		return HAL_ERROR;
-	}
-
-	// updating tick for pwm startup phase
-	pwmStartupStart = HAL_GetTick();
-
 	// Init EH
     EH_init(&bms->beh, bms->bmsCAN.bhcan1, BMS_NODE, &(bms->bmsCAN.CAN1_Buff));
 
     // Setting default safestate status
     bms->safeStateStatus = 0;
 
-    // setting default value of max stored temperarture
+    // setting default value of max stored temperature
     bms->maxTemperature = 0.0f;
 
     // Setting default state of FAN
@@ -84,12 +93,22 @@ HAL_StatusTypeDef BMS_Init(BMS_TypeDef* bms,  CAN_HandleTypeDef* bhcan1, CAN_Han
 	return HAL_OK;
 }
 
+void BMS_RS485_Init(BMS_TypeDef* bms){
+	if(bms == NULL){
+		return;
+	}
+	/* Default half-duplex listen: DE=0, /RE=0 */
+	HAL_GPIO_WritePin(RS_DIR_GPIO_Port, RS_DIR_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(RE_DIR_GPIO_Port, RE_DIR_Pin, GPIO_PIN_RESET);
+}
+
 /*
 	 ==============================================================================
 						   ##### MODE HANDLERS #####
 	 ==============================================================================
 */
 
+// Inside BMS_Mode_Normal in BMS.c:
 HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms){
 
 	// re-launching peripherals in case change of status occurred
@@ -102,12 +121,14 @@ HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms){
 		bms->prevStatus = BMS_NORMAL;
 	}
 
+	/* JK polled from main() every loop (incl. error mode). */
+
 	// Read ADC's channels
 	if(BMS_ADC_ReadValues(bms) != HAL_OK){
 		return HAL_ERROR;
 	}
 
-	// Handle received frames from CAN2
+	// Handle received frames from CAN1
 	if(BMS_CAN_HandleRxMsg(bms) != HAL_OK){
 		return HAL_ERROR;
 	}
@@ -115,13 +136,12 @@ HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms){
 	// Send Data via CAN
 	CAN_HandleScheduled(bms->bmsCAN.bhcan1, &bms->bmsCAN.CAN1_Buff);
 
-
 	// Handle PWM generation
 	if(BMS_PWM_NormalMode(bms) != HAL_OK){
 		return HAL_ERROR;
 	}
 
-	// Handling HV Sensing - if safe state and HVIL indicate equal state
+	// Handling HV Sensing
 	if(BMS_HVIL_Handler(bms) != HAL_OK){
 		return HAL_ERROR;
 	}
@@ -136,6 +156,8 @@ HAL_StatusTypeDef BMS_Mode_Normal(BMS_TypeDef* bms){
 
 HAL_StatusTypeDef BMS_Mode_Error(BMS_TypeDef* bms){
 
+	/* JK RX/TX is invoked from main() every loop (not here). */
+
 	if(bms->prevStatus != BMS_Error){
 
 		// Stopping peripherals
@@ -147,7 +169,6 @@ HAL_StatusTypeDef BMS_Mode_Error(BMS_TypeDef* bms){
 		bms->prevStatus = BMS_Error;
 	}
 
-
 	// Handling PWM generation in error/sleep mode
 	if(BMS_PWM_SleepMode(bms) != HAL_OK){
 		return HAL_ERROR;
@@ -158,29 +179,17 @@ HAL_StatusTypeDef BMS_Mode_Error(BMS_TypeDef* bms){
 
 HAL_StatusTypeDef BMS_Mode_Change(BMS_TypeDef* bms, BMS_StatusTypeDef_e status){
 
-	// checking if change of mode occurred
-	if(bms->prevStatus != BMS_Error){
-
-		// Stop peripherals
-		if(BMS_Stop_Peripherals(bms) != HAL_OK){
-			return HAL_ERROR;
-		}
-
+	if(NULL == bms){
+		return HAL_ERROR;
 	}
 
-	// saving previous status
 	bms->prevStatus = bms->status;
-
-	// overwriting current BMS's status
-	bms->status = status;
+	bms->status     = status;
 
 	return HAL_OK;
 }
 
-
 HAL_StatusTypeDef BMS_Log_Data(BMS_TypeDef* bms){
-
-
 	return HAL_OK;
 }
 
@@ -192,82 +201,44 @@ HAL_StatusTypeDef BMS_Log_Data(BMS_TypeDef* bms){
 
 HAL_StatusTypeDef BMS_Start_Peripherals(BMS_TypeDef* bms){
 
-/*
-	 ==============================================================================
-	                       ##### LAUNCHING ADC #####
-	 ==============================================================================
-*/
+	if(NULL == bms){
+		return HAL_ERROR;
+	}
 
-	// Launching ADC for BMS — fail must return HAL_ERROR (do not swallow)
 	if(ADC_Init(bms->bmsADC.hadc, &bms->bmsADC.cadc1, &bms->bmsADC.badc1) != HAL_OK){
 		return HAL_ERROR;
 	}
 
-/*
-	 ==============================================================================
-						   ##### LAUNCHING CAN #####
-	 ==============================================================================
-*/
-
-	// Launching CAN for BMS
-	if(BMS_CAN_Init(bms) != HAL_OK){
-		return HAL_ERROR;
-	}
-
-	// Checking if CAN1 is in sleep mode, if yes, then wake up CAN1
 	if(HAL_CAN_IsSleepActive(bms->bmsCAN.bhcan1)){
 		if(HAL_CAN_WakeUp(bms->bmsCAN.bhcan1) != HAL_OK){
 			return HAL_ERROR;
 		}
 	}
 
-	// Checking if CAN2 is in sleep mode, if yes, then wake up CAN2
-	if(HAL_CAN_IsSleepActive(bms->bmsCAN.bhcan2)){
-		if(HAL_CAN_WakeUp(bms->bmsCAN.bhcan2) != HAL_OK){
-			return HAL_ERROR;
-		}
+	if(HAL_CAN_ActivateNotification(bms->bmsCAN.bhcan1, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK){
+		return HAL_ERROR;
 	}
 
 	return HAL_OK;
 }
 
-
 HAL_StatusTypeDef BMS_Stop_Peripherals(BMS_TypeDef* bms){
 
-/*
-	 ==============================================================================
-						   ##### STOPPING ADC #####
-	 ==============================================================================
-*/
-
-	// Stopping ADC peripheral workflow for BMS in Standby or Error Mode
-	if(HAL_ADC_Stop(bms->bmsADC.hadc) != HAL_OK){
+	if(NULL == bms){
 		return HAL_ERROR;
 	}
 
-	/* Stop ADC DMA stream — failure must propagate as HAL_ERROR */
 	if(HAL_ADC_Stop_DMA(bms->bmsADC.hadc) !=  HAL_OK){
 		return HAL_ERROR;
 	}
 
-/*
-	 ==============================================================================
-						   ##### STOPPING CAN #####
-	 ==============================================================================
-*/
-
-
-	// Stopping CAN2 peripheral workflow for BMS in Standby or Error Mode
-	if(HAL_CAN_Stop(bms->bmsCAN.bhcan2) != HAL_OK){
+	if(HAL_CAN_Stop(bms->bmsCAN.bhcan1) != HAL_OK){
 		return HAL_ERROR;
 	}
 
-	// Deactivating Interrupts for CAN2
-	if(HAL_CAN_DeactivateNotification(bms->bmsCAN.bhcan2, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK){
+	if(HAL_CAN_DeactivateNotification(bms->bmsCAN.bhcan1, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK){
 		return HAL_ERROR;
 	}
-
-
 
 	return HAL_OK;
 }
@@ -284,38 +255,22 @@ HAL_StatusTypeDef BMS_HVIL_Handler(BMS_TypeDef* bms){
 		return HAL_ERROR;
 	}
 
-
 #ifdef PROD
-
 	if(HAL_GPIO_ReadPin(HVIL_GPIO_Port, HVIL_Pin) == GPIO_PIN_SET &&
 		bms->safeStateStatus == SAFE_STATE_OK){
-
-
-
-		// reporting error handler
 		EH_report(&bms->beh, EH_SAFE_STATE_LEAK, ERROR_SEVERITY_SAFE_STATE);
-
 	}
-
 #endif
 
 	return HAL_OK;
-
 }
 
 HAL_StatusTypeDef BMS_FAN_Control(BMS_TypeDef* bms){
 
-	// Checking if correct pointer to bms object was given
 	if(NULL == bms){
 		return HAL_ERROR;
 	}
 
-	/*
-	 * Hysteresis on latched maxTemperature (updated only after a full 7x9 unique CAN2 scan):
-	 *   ON  when max >= PRE_COOLING_TEMP  (50 °C)
-	 *   OFF when max <= POST_COOLING_TEMP (40 °C)
-	 * Do not clear maxTemperature here — scan logic owns that value.
-	 */
 	if(bms->maxTemperature >= PRE_COOLING_TEMP && OFF == bms->fanState){
 		bms->fanState = ON;
 	}
@@ -323,17 +278,13 @@ HAL_StatusTypeDef BMS_FAN_Control(BMS_TypeDef* bms){
 		bms->fanState = OFF;
 	}
 
-	/* Drive FAN_CONTROL GPIO from fanState */
 	switch(bms->fanState){
-
 		case ON:
 			HAL_GPIO_WritePin(FAN_CONTROL_GPIO_Port, FAN_CONTROL_Pin, GPIO_PIN_SET);
 			break;
-
 		case OFF:
 			HAL_GPIO_WritePin(FAN_CONTROL_GPIO_Port, FAN_CONTROL_Pin, GPIO_PIN_RESET);
 			break;
-
 		default:
 			return HAL_ERROR;
 	}
@@ -349,43 +300,25 @@ HAL_StatusTypeDef BMS_FAN_Control(BMS_TypeDef* bms){
 
 void BMS_Mode_LEDBlink(BMS_TypeDef* bms){
 
+	if(NULL == bms){
+		return;
+	}
 
-	// init variable which stores current tick
-	static uint32_t now;
-	now = HAL_GetTick();
-
-	// checking if correct ammout of time passed to Toggle LED state
-
-	if(now - lastTick >= 500){
+	if(HAL_GetTick() - s_ledLastTick >= BMS_LED_PERIOD){
 
 		switch(bms->status){
-
-			// executing blinking for normal BMS's state
 			case BMS_NORMAL:
-				// Toggling GREEN LED
 				HAL_GPIO_TogglePin(GREEN_LD_GPIO_Port, GREEN_LD_Pin);
-
-				// Turning off RED lED
 				HAL_GPIO_WritePin(RED_LD_GPIO_Port, RED_LD_Pin, GPIO_PIN_RESET);
-
 				break;
-
-			// executing blinking for error BMS's state
 			case BMS_Error:
-
-				// Toggling RED LED
 				HAL_GPIO_TogglePin(RED_LD_GPIO_Port, RED_LD_Pin);
-
-				// Turning off GREEN lED
 				HAL_GPIO_WritePin(GREEN_LD_GPIO_Port, GREEN_LD_Pin, GPIO_PIN_RESET);
-
 				break;
 			default:
 				break;
 		}
 
-		// updating tick
-		lastTick = now;
-
+		s_ledLastTick = HAL_GetTick();
 	}
 }

@@ -15,13 +15,13 @@
   *
   ******************************************************************************
   */
-
+#pragma once
 
 #ifndef BMS_PWM_H_
 #define BMS_PWM_H_
 
 #ifdef __cplusplus
- extern 'C'{
+extern "C" {
 #endif
 
 
@@ -36,11 +36,11 @@
 
 //< --------------------------------- STARTUP STAGE (2s) ----------------------------------
 #define RELAY_STARTUP_DUTY     (100)			//< Duty cycle for generated signal at startup          [%]
-#define RELAY_STARTUP_FREQ     (1000)			//< Frequency of generated signal at startup mode       [Hz]
+#define RELAY_STARTUP_FREQ     (10000)			//< Frequency of generated signal at startup mode       [Hz]
 
 //< --------------------------------- OPERATIONAL STAGE -----------------------------------
 #define RELAY_OPERATIONAL_DUTY (50)			    //< Duty cycle for generated signal at operational mode [%]
-#define RELAY_OPERATIONAL_FREQ (1000)			//< Frequency of generated signal at operational mode   [Hz]
+#define RELAY_OPERATIONAL_FREQ (10000)			//< Frequency of generated signal at operational mode   [Hz]
 
 
 /* Variables  ------------------------------------------------------------------------------  */
@@ -87,7 +87,7 @@ HAL_StatusTypeDef BMS_PWM_NormalMode(BMS_TypeDef* bms);
 HAL_StatusTypeDef BMS_PWM_SleepMode(BMS_TypeDef* bms);
 
 #ifdef __cplusplus
- 	 }
+}
 #endif
 
-#endif /* INC_BMS_TYPES_H_ */
+#endif /* BMS_PWM_H_ */

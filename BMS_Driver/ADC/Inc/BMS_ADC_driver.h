@@ -29,6 +29,20 @@ extern "C" {
 
 /* Macros ------------------------------------------------------------------------------------  */
 
+/* IIR on pack volts; 1/32 holds hundredths without lagging DC */
+#define BMS_VPACK_LP_ALPHA   (1.0f / 32.0f)
+
+/* Hold displayed value until change exceeds this — stops 82.19/82.21 flicker */
+#define BMS_VPACK_HOLD_V     (0.015f)
+
+/*
+ * Linear divider reads ~56 V while the meter is 82.2 V (1.5-cycle S&H).
+ * Scale the divider once; do not use the quadratic — at ~2 V pin it
+ * jumps to ~199 V from 99.725*Vpin alone.
+ */
+#define BMS_VPACK_METER_V    (82.2f)
+#define BMS_VPACK_DIVIDER_V  (56.0f)
+#define BMS_VPACK_SCALE      (BMS_VPACK_METER_V / BMS_VPACK_DIVIDER_V)
 
 /* Functions' prototypes ---------------------------------------------------------------------  */
 

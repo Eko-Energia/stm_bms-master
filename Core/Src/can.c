@@ -55,16 +55,7 @@ void MX_CAN1_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN CAN1_Init 2 */
-  /*
-   * Enable bus-off recovery and retransmission for vehicle CAN robustness.
-   * Re-init applies flags after Cube-generated defaults (may be DISABLE).
-   */
-  hcan1.Init.AutoBusOff = ENABLE;
-  hcan1.Init.AutoRetransmission = ENABLE;
-  if (HAL_CAN_Init(&hcan1) != HAL_OK)
-  {
-    Error_Handler();
-  }
+
   /* USER CODE END CAN1_Init 2 */
 
 }
@@ -87,7 +78,7 @@ void MX_CAN2_Init(void)
   hcan2.Init.TimeSeg2 = CAN_BS2_4TQ;
   hcan2.Init.TimeTriggeredMode = DISABLE;
   hcan2.Init.AutoBusOff = DISABLE;
-  hcan2.Init.AutoWakeUp = DISABLE;
+  hcan2.Init.AutoWakeUp = ENABLE;
   hcan2.Init.AutoRetransmission = DISABLE;
   hcan2.Init.ReceiveFifoLocked = DISABLE;
   hcan2.Init.TransmitFifoPriority = DISABLE;
@@ -96,16 +87,7 @@ void MX_CAN2_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN CAN2_Init 2 */
-  /*
-   * Same robustness settings as CAN1 (AutoBusOff + AutoRetransmission).
-   * Re-init after Cube defaults so regenerate does not drop these enables.
-   */
-  hcan2.Init.AutoBusOff = ENABLE;
-  hcan2.Init.AutoRetransmission = ENABLE;
-  if (HAL_CAN_Init(&hcan2) != HAL_OK)
-  {
-    Error_Handler();
-  }
+
   /* USER CODE END CAN2_Init 2 */
 
 }
@@ -143,7 +125,16 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /* USER CODE BEGIN CAN1_MspInit 1 */
-
+    /*
+     * Recessive idle on RX so HAL_CAN_Start can see 11 recessive bits (leave INAK).
+     * Cube generates GPIO_NOPULL — override after the generated init.
+     * Do not call AFIO CAN remap macros here: they RMW MAPR and can clear SWJ_CFG
+     * (write-only), which disconnects SWD. Reset mapping is already PA11/PA12.
+     */
+    GPIO_InitStruct.Pin = GPIO_PIN_11;
+    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
   /* USER CODE END CAN1_MspInit 1 */
   }
   else if(canHandle->Instance==CAN2)
@@ -173,9 +164,6 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-    /* CAN2 interrupt Init */
-    HAL_NVIC_SetPriority(CAN2_RX0_IRQn, 2, 0);
-    HAL_NVIC_EnableIRQ(CAN2_RX0_IRQn);
   /* USER CODE BEGIN CAN2_MspInit 1 */
 
   /* USER CODE END CAN2_MspInit 1 */
