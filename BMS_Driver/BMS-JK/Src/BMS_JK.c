@@ -18,7 +18,7 @@
   * bytes kept when DR has data. Decode aligns on 4E57; raw kept if no SOF.
   * HSI-only clock — do not enable HSE.
   ******************************************************************************
- */
+  */
 
 #include "BMS_JK.h"
 #include "main.h"
@@ -161,8 +161,8 @@ static void BMS_JK_PublishRxHead(BMS_JK_HandleTypeDef *jk, uint16_t n)
     }
 }
 
-HAL_StatusTypeDef BMS_JK_Init(BMS_JK_HandleTypeDef *jk, UART_HandleTypeDef *huart,
-                              GPIO_TypeDef *de_port, uint16_t de_pin,
+HAL_StatusTypeDef BMS_JK_Init(BMS_JK_HandleTypeDef *jk, UART_HandleTypeDef *huart, 
+                              GPIO_TypeDef *de_port, uint16_t de_pin, 
                               GPIO_TypeDef *re_port, uint16_t re_pin)
 {
     (void)de_port;
@@ -173,7 +173,7 @@ HAL_StatusTypeDef BMS_JK_Init(BMS_JK_HandleTypeDef *jk, UART_HandleTypeDef *huar
     if ((jk == NULL) || (huart == NULL)) {
         return HAL_ERROR;
     }
-
+    
     memset(jk, 0, sizeof(*jk));
     jk->huart = huart;
 
@@ -343,7 +343,7 @@ static uint8_t BMS_JK_ScanTags(BMS_JK_HandleTypeDef *jk, uint16_t start, uint16_
                 }
                 if (active > 0U) {
                     jk->snapshot.cellCount = active;
-                    jk->initialized = 1U;
+        jk->initialized = 1U;
                     got = 1U;
                 }
             }

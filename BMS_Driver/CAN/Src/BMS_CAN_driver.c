@@ -172,23 +172,23 @@ HAL_StatusTypeDef BMS_CAN_AddPeripheralFrames(BMS_TypeDef* bms){
 		}
 	}
 
-	/* JK snapshot export — refreshed from bms.bmsJK.snapshot by getData callbacks */
-	if(BMS_CAN_AddMessage(bms, BMS_JK_PACK_INFO_ID, BMS_JK_PACK_INFO_DLC, BMS_JK_CAN_PERIOD) != HAL_OK){
+	/* JK snapshot export — StdId 140..145, refreshed from bms.bmsJK.snapshot */
+	if(BMS_CAN_AddMessage(bms, BMSMaster_JK_PACK_INFO_ID, BMSMaster_JK_PACK_INFO_DLC, BMSMaster_JK_CAN_PERIOD) != HAL_OK){
 		return HAL_ERROR;
 	}
-	if(BMS_CAN_AddMessage(bms, BMS_JK_CELL_VOLT_1_4_ID, BMS_JK_CELL_VOLT_DLC, BMS_JK_CAN_PERIOD) != HAL_OK){
+	if(BMS_CAN_AddMessage(bms, BMSMaster_JK_CELL_VOLT_1_4_ID, BMSMaster_JK_CELL_VOLT_DLC, BMSMaster_JK_CAN_PERIOD) != HAL_OK){
 		return HAL_ERROR;
 	}
-	if(BMS_CAN_AddMessage(bms, BMS_JK_CELL_VOLT_5_8_ID, BMS_JK_CELL_VOLT_DLC, BMS_JK_CAN_PERIOD) != HAL_OK){
+	if(BMS_CAN_AddMessage(bms, BMSMaster_JK_CELL_VOLT_5_8_ID, BMSMaster_JK_CELL_VOLT_DLC, BMSMaster_JK_CAN_PERIOD) != HAL_OK){
 		return HAL_ERROR;
 	}
-	if(BMS_CAN_AddMessage(bms, BMS_JK_CELL_VOLT_9_12_ID, BMS_JK_CELL_VOLT_DLC, BMS_JK_CAN_PERIOD) != HAL_OK){
+	if(BMS_CAN_AddMessage(bms, BMSMaster_JK_CELL_VOLT_9_12_ID, BMSMaster_JK_CELL_VOLT_DLC, BMSMaster_JK_CAN_PERIOD) != HAL_OK){
 		return HAL_ERROR;
 	}
-	if(BMS_CAN_AddMessage(bms, BMS_JK_TEMP_ID, BMS_JK_TEMP_DLC, BMS_JK_CAN_PERIOD) != HAL_OK){
+	if(BMS_CAN_AddMessage(bms, BMSMaster_JK_TEMP_ID, BMSMaster_JK_TEMP_DLC, BMSMaster_JK_CAN_PERIOD) != HAL_OK){
 		return HAL_ERROR;
 	}
-	if(BMS_CAN_AddMessage(bms, BMS_JK_CYCLE_STATS_ID, BMS_JK_CYCLE_STATS_DLC, BMS_JK_CAN_PERIOD) != HAL_OK){
+	if(BMS_CAN_AddMessage(bms, BMSMaster_JK_CYCLE_STATS_ID, BMSMaster_JK_CYCLE_STATS_DLC, BMSMaster_JK_CAN_PERIOD) != HAL_OK){
 		return HAL_ERROR;
 	}
 
@@ -251,7 +251,7 @@ static void BMS_CAN_PackJK_CellBlock(uint8_t *data, uint8_t cellBase)
 
 void BMS_CAN_Get_JK_PackInfo(uint8_t *data, void *context)
 {
-	/* Docs 0x140: PackVoltage/Current factor 0.01 → raw = mV/10, mA/10; Intel LE */
+	/* StdId 140: PackVoltage/Current factor 0.01 → raw = mV/10, mA/10; Intel LE */
 	uint16_t voltRaw;
 	int16_t  currRaw;
 	int32_t  mv = bms.bmsJK.snapshot.packVoltageMV;
